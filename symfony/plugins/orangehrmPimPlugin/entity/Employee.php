@@ -53,11 +53,11 @@ class Employee
     private string $nickName;
 
     /**
-     * @var int
+     * @var int|null
      *
-     * @ORM\Column(name="emp_smoker", type="integer", length=2)
+     * @ORM\Column(name="emp_smoker", type="smallint", nullable=true, options={"default" : 0})
      */
-    private $smoker;
+    private ?int $smoker;
 
     /**
      * @var string
@@ -179,12 +179,12 @@ class Employee
     private $emp_dri_lice_exp_date;
 
     /**
-     * @var int
+     * @var EmploymentStatus|null
      *
-     * @ORM\ManyToOne(targetEntity="EmploymentStatus", inversedBy="employees")
-     * @ORM\Column(name="emp_status", type="integer", length=13)
+     * @ORM\ManyToOne(targetEntity="OrangeHRM\Entity\EmploymentStatus", inversedBy="employees")
+     * @ORM\JoinColumn(name="emp_status", referencedColumnName="id", nullable=true)
      */
-    private $empStatus;
+    private ?EmploymentStatus $empStatus;
 
     /**
      * @var int
@@ -356,16 +356,6 @@ class Employee
     /**
      * @var Collection
      *
-     * @ORM\OneToMany(targetEntity="OrangeHRM\Entity\EmploymentStatus", mappedBy="Employee")
-     * @ORM\JoinColumns({
-     *   @ORM\JoinColumn(name="emp_status", referencedColumnName="id")
-     * })
-     */
-    private $employeeStatus;
-
-    /**
-     * @var Collection
-     *
      * @ORM\ManyToMany(targetEntity="OrangeHRM\Entity\Employee", mappedBy="subordinates")
      */
     private $supervisors;
@@ -428,10 +418,7 @@ class Employee
     /**
      * @var Collection
      *
-     * @ORM\ManyToMany(targetEntity="OrangeHRM\Entity\EmployeeSkill", mappedBy="Employee")
-     * @ORM\JoinColumns({
-     *   @ORM\JoinColumn(name="emp_number", referencedColumnName="emp_number")
-     * })
+     * @ORM\OneToMany(targetEntity="OrangeHRM\Entity\EmployeeSkill", mappedBy="employee")
      */
     private $skills;
 
@@ -508,10 +495,17 @@ class Employee
     /**
      * @var EmployeeTerminationRecord|null
      *
-     * @ORM\ManyToOne(targetEntity="OrangeHRM\Entity\EmployeeTerminationRecord")
+     * @ORM\OneToOne(targetEntity="OrangeHRM\Entity\EmployeeTerminationRecord")
      * @ORM\JoinColumn(name="termination_id", referencedColumnName="id")
      */
-    private ?EmployeeTerminationRecord $employeeTerminationRecord;
+    private ?EmployeeTerminationRecord $employeeTerminationRecord = null;
+
+    /**
+     * @var Collection
+     *
+     * @ORM\OneToMany(targetEntity="OrangeHRM\Entity\EmployeeTerminationRecord", mappedBy="employee")
+     */
+    private $employeeTerminationRecords;
 
     /**
      * @var Collection
@@ -535,9 +529,9 @@ class Employee
      */
     public function __construct()
     {
+        $this->smoker = 0;
         $this->subDivision = new ArrayCollection();
         $this->jobTitle = new ArrayCollection();
-        $this->employeeStatus = new ArrayCollection();
         $this->supervisors = new ArrayCollection();
         $this->locations = new ArrayCollection();
         $this->dependents = new ArrayCollection();
@@ -553,6 +547,7 @@ class Employee
         $this->contracts = new ArrayCollection();
         $this->attachments = new ArrayCollection();
         $this->projectAdmin = new ArrayCollection();
+        $this->employeeTerminationRecords = new ArrayCollection();
         $this->EmployeeCountry = new ArrayCollection();
         $this->users = new ArrayCollection();
     }
@@ -683,5 +678,21 @@ class Employee
     public function setUsers($users): void
     {
         $this->users = $users;
+    }
+
+    /**
+     * @return Collection
+     */
+    public function getSkills(): Collection
+    {
+        return $this->skills;
+    }
+
+    /**
+     * @param Collection $skills
+     */
+    public function setSkills(Collection $skills): void
+    {
+        $this->skills = $skills;
     }
 }

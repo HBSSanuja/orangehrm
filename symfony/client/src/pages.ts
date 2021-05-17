@@ -30,6 +30,15 @@ import OrgStructure from '@/orangehrmAdminPlugin/pages/orgStructure/OrgStructure
 import EditEmploymentStatus from '@/orangehrmAdminPlugin/pages/employmentStatus/EditEmploymentStatus.vue';
 import EmploymentStatus from '@/orangehrmAdminPlugin/pages/employmentStatus/EmploymentStatus.vue';
 import SaveEmploymentStatus from '@/orangehrmAdminPlugin/pages/employmentStatus/SaveEmploymentStatus.vue';
+import QualificationEducation from '@/orangehrmAdminPlugin/pages/qualificationEducation/QualificationEducation.vue';
+import EditQualificationEducation from '@/orangehrmAdminPlugin/pages/qualificationEducation/EditQualificationEducation.vue';
+import SaveQualificationEducation from '@/orangehrmAdminPlugin/pages/qualificationEducation/SaveQualificationEducation.vue';
+import QualificationSkill from '@/orangehrmAdminPlugin/pages/qualificationSkill/QualificationSkill.vue';
+import EditQualificationSkill from '@/orangehrmAdminPlugin/pages/qualificationSkill/EditQualificationSkill.vue';
+import SaveQualificationSkill from '@/orangehrmAdminPlugin/pages/qualificationSkill/SaveQualificationSkill.vue';
+import EditQualificationLicense from '@/orangehrmAdminPlugin/pages/qualificationLicense/EditLicense.vue';
+import SaveQualificationLicense from '@/orangehrmAdminPlugin/pages/qualificationLicense/SaveLicense.vue';
+import QualificationLicense from '@/orangehrmAdminPlugin/pages/qualificationLicense/License.vue';
 
 export default {
   'job-title-list': JobTitle,
@@ -38,6 +47,9 @@ export default {
   'job-category-list': JobCategory,
   'job-category-edit': EditJobCategory,
   'job-category-save': SaveJobCategory,
+  'qualification-education-list': QualificationEducation,
+  'qualification-education-edit': EditQualificationEducation,
+  'qualification-education-save': SaveQualificationEducation,
   ...authenticationPages,
   'system-user-list': SystemUser,
   'system-user-edit': EditSystemUser,
@@ -46,4 +58,10 @@ export default {
   'employment-status-list': EmploymentStatus,
   'employment-status-save': SaveEmploymentStatus,
   'employment-status-edit': EditEmploymentStatus,
+  'qualification-skill-list': QualificationSkill,
+  'qualification-skill-edit': EditQualificationSkill,
+  'qualification-skill-save': SaveQualificationSkill,
+  'license-list': QualificationLicense,
+  'license-save': SaveQualificationLicense,
+  'license-edit': EditQualificationLicense,
 };
