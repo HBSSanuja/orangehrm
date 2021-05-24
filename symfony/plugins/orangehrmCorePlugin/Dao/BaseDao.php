@@ -19,81 +19,13 @@
 
 namespace OrangeHRM\Core\Dao;
 
-use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\OptimisticLockException;
-use Doctrine\ORM\ORMException;
 use Doctrine\ORM\QueryBuilder;
-use Doctrine\Persistence\ObjectRepository;
-use OrangeHRM\ORM\Doctrine;
-use OrangeHRM\ORM\Paginator;
+use OrangeHRM\Core\Dto\FilterParams;
+use OrangeHRM\Core\Traits\ORM\EntityManagerHelperTrait;
 
 abstract class BaseDao
 {
-    /**
-     * @return EntityManager
-     */
-    protected function getEntityManager(): EntityManager
-    {
-        return Doctrine::getEntityManager();
-    }
-
-    /**
-     * @param string $entityClass
-     * @return ObjectRepository|EntityRepository
-     *
-     * @template T
-     * @psalm-param class-string<T> $entityClass
-     * @psalm-return EntityRepository<T>
-     */
-    protected function getRepository(string $entityClass)
-    {
-        return Doctrine::getEntityManager()->getRepository($entityClass);
-    }
-
-    /**
-     * @param $entity
-     * @throws ORMException
-     * @throws OptimisticLockException
-     */
-    protected function persist($entity): void
-    {
-        Doctrine::getEntityManager()->persist($entity);
-        Doctrine::getEntityManager()->flush();
-    }
-
-    /**
-     * @param $entity
-     * @throws ORMException
-     * @throws OptimisticLockException
-     */
-    protected function remove($entity): void
-    {
-        Doctrine::getEntityManager()->remove($entity);
-        Doctrine::getEntityManager()->flush();
-    }
-
-    /**
-     * @param string $entityClass
-     * @param string $alias
-     * @param string|null $indexBy
-     * @return QueryBuilder
-     */
-    protected function createQueryBuilder(string $entityClass, string $alias, ?string $indexBy = null): QueryBuilder
-    {
-        return Doctrine::getEntityManager()->createQueryBuilder()
-            ->select($alias)
-            ->from($entityClass, $alias, $indexBy);
-    }
-
-    /**
-     * @param QueryBuilder $qb
-     * @return Paginator
-     */
-    protected function getPaginator(QueryBuilder $qb): Paginator
-    {
-        return new Paginator($qb);
-    }
+    use EntityManagerHelperTrait;
 
     /**
      * @param QueryBuilder $qb
@@ -102,5 +34,48 @@ abstract class BaseDao
     protected function count(QueryBuilder $qb): int
     {
         return $this->getPaginator($qb)->count();
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param FilterParams $filterParams
+     * @return QueryBuilder
+     */
+    protected function setSortingParams(QueryBuilder $qb, FilterParams $filterParams): QueryBuilder
+    {
+        if (!is_null($filterParams->getSortField())) {
+            $qb->addOrderBy(
+                $filterParams->getSortField(),
+                $filterParams->getSortOrder()
+            );
+        }
+        return $qb;
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param FilterParams $filterParams
+     * @return QueryBuilder
+     */
+    protected function setPaginationParams(QueryBuilder $qb, FilterParams $filterParams): QueryBuilder
+    {
+        // If limit = 0, will not paginate
+        if (!empty($filterParams->getLimit())) {
+            $qb->setFirstResult($filterParams->getOffset())
+                ->setMaxResults($filterParams->getLimit());
+        }
+        return $qb;
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param FilterParams $filterParams
+     * @return QueryBuilder
+     */
+    protected function setSortingAndPaginationParams(QueryBuilder $qb, FilterParams $filterParams): QueryBuilder
+    {
+        $this->setSortingParams($qb, $filterParams);
+        $this->setPaginationParams($qb, $filterParams);
+        return $qb;
     }
 }

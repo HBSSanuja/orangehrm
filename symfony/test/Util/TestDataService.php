@@ -21,17 +21,19 @@ namespace OrangeHRM\Tests\Util;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\Persistence\Mapping\MappingException;
+use Exception;
 use OrangeHRM\Entity\UniqueId;
 use OrangeHRM\ORM\Doctrine;
+use PDO;
 use Symfony\Component\Yaml\Yaml;
 
-class TestDataService {
-
+class TestDataService
+{
     /** Encrypted fields in the format 
      *        array('Model1' => array(field1, field2), 
      *              'Model2' => array(field1, field2))        
      */
-    private static $encryptedModels = array('EmployeeSalary' => array('amount'));
+    private static $encryptedModels = []; //array('EmployeeSalary' => array('amount'));
     
     private static $dbConnection;
     private static $data;
@@ -42,7 +44,7 @@ class TestDataService {
     public static function populate($fixture) {
         $pathToFixtures = realpath($fixture);
         if (!$pathToFixtures) {
-            throw new \Exception(sprintf("Couldn't find fixture file in %s", $fixture));
+            throw new Exception(sprintf("Couldn't find fixture file in %s", $fixture));
         }
         self::_populateUsingPdoTransaction($pathToFixtures);
         //self::_populateUsingDoctrineObjects($fixture);
@@ -97,7 +99,7 @@ class TestDataService {
         $query = "";
         try {
 
-            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $pdo->beginTransaction();
 
             if ($useCache) {
@@ -119,7 +121,7 @@ class TestDataService {
             }
 
             $pdo->commit();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
 
             $pdo->rollBack();
             echo __FILE__ . ':' . __LINE__ . "\n Transaction failed: " . $e->getMessage() .
@@ -282,9 +284,12 @@ class TestDataService {
         $pdo->exec("SET FOREIGN_KEY_CHECKS=1;");
     }
 
-
-    private static function _truncateTables($tableNames = null) {
-
+    /**
+     * @param array|null $tableNames
+     * @throws MappingException
+     */
+    private static function _truncateTables(?array $tableNames = null): void
+    {
         if (is_null($tableNames)) {
             $tableNames = self::$tableNames;
         }
@@ -295,24 +300,27 @@ class TestDataService {
             $query = '';
 
             try {
-
-                $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+                $pdo->setAttribute(PDO::ATTR_AUTOCOMMIT,0);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 $pdo->beginTransaction();
 
                 foreach ($tableNames as $tableName) {
                     $query = 'DELETE FROM ' . $tableName;
                     $pdo->query($query);
+                    $query = 'ALTER TABLE `' . $tableName . '` AUTO_INCREMENT = 1';
+                    $pdo->query($query);
                 }
 
                 $query = "UPDATE hs_hr_unique_id SET last_id = 0 WHERE table_name in ('" .
-                        implode("','", $tableNames) . "')";
+                    implode("','", $tableNames) . "')";
                 $pdo->exec($query);
 
                 $pdo->commit();
-            } catch (\Exception $e) {
+                $pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);
+            } catch (Exception $e) {
                 $pdo->rollBack();
                 echo __FILE__ . ':' . __LINE__ . "\n Transaction failed: " . $e->getMessage() .
-                "\nQuery: [" . $query . "]\n" . "Fixture: " . self::$lastFixture . "\n\n";
+                    "\nQuery: [" . $query . "]\n" . "Fixture: " . self::$lastFixture . "\n\n";
             }
 
             // Clear table cache
@@ -328,7 +336,7 @@ class TestDataService {
 
     /**
      *
-     * @return \PDO
+     * @return PDO
      */
     private static function _getDbConnection() {
 
@@ -356,13 +364,16 @@ class TestDataService {
         self::_truncateTables();
     }
 
-    public static function truncateSpecificTables($aliasArray) {
-
-        $tableNames = array();
+    /**
+     * @param array $aliasArray
+     */
+    public static function truncateSpecificTables(array $aliasArray): void
+    {
+        $tableNames = [];
 
         foreach ($aliasArray as $alias) {
             try {
-                self::$tableNames[] = self::_getTableName($alias);
+                $tableNames[] = self::_getTableName($alias);
                 Doctrine::getEntityManager()->clear(self::getFQEntityName($alias));
             } catch (MappingException $e) {
                 echo __FILE__ . ':' . __LINE__ . ") Skipping unknown table alias: " . $alias . "\n";
@@ -389,6 +400,9 @@ class TestDataService {
         $entityName = self::getFQEntityName($alias);
         $q = Doctrine::getEntityManager()->getRepository($entityName)->createQueryBuilder('a');
         $q->setMaxResults(1);
+        if (substr( $orderBy, 0, 2 ) !== "a.") {
+            $orderBy = 'a.' .$orderBy;
+        }
         $q->orderBy($orderBy,'DESC');
 
         return $q->getQuery()->getOneOrNullResult();
@@ -407,9 +421,15 @@ class TestDataService {
         return self::loadObjectListFromArray($alias, $data[$key]);
     }
 
-    public static function loadObjectListFromArray($alias, $data) {
-
-        $objectList = array();
+    /**
+     * @param string $alias
+     * @param array|object[] $data
+     * @return array|object[]
+     */
+    public static function loadObjectListFromArray(string $alias, array $data): array
+    {
+        $objectList = [];
+        $classMetadata = self::_getClassMetadata($alias);
 
         foreach ($data as $row) {
             $entityName = self::getFQEntityName($alias);
@@ -417,6 +437,23 @@ class TestDataService {
 
             foreach ($row as $attribute => $value) {
                 $setMethodName = "set" . ucfirst($attribute);
+
+                $fieldName = self::getFieldForColumn($classMetadata, $attribute);
+                if ($fieldName) {
+                    $associationMapping = self::getAssociationMapping($classMetadata, $fieldName);
+                } else {
+                    $associationMapping = self::getAssociationMapping($classMetadata, $attribute);
+                }
+
+                if ($associationMapping) {
+                    $value = Doctrine::getEntityManager()->getReference($associationMapping['targetEntity'], $value);
+                }
+
+                if (!method_exists($object, $setMethodName)) {
+                    if ($attribute) {
+                        $setMethodName = "set" . ucfirst($fieldName);
+                    }
+                }
                 $object->$setMethodName($value);
             }
 
@@ -426,8 +463,36 @@ class TestDataService {
         return $objectList;
     }
 
+    /**
+     * @param ClassMetadata $classMetadata
+     * @param string $columnName
+     * @return string|null
+     */
+    public static function getFieldForColumn(ClassMetadata $classMetadata, string $columnName): ?string
+    {
+        try {
+            return $classMetadata->getFieldForColumn($columnName);
+        } catch (\Doctrine\ORM\Mapping\MappingException $e) {
+            return null;
+        }
+    }
+
+    /**
+     * @param ClassMetadata $classMetadata
+     * @param string $fieldName
+     * @return array|null
+     */
+    public static function getAssociationMapping(ClassMetadata $classMetadata, string $fieldName): ?array
+    {
+        try {
+            return $classMetadata->getAssociationMapping($fieldName);
+        } catch (\Doctrine\ORM\Mapping\MappingException $e) {
+            return null;
+        }
+    }
+
     public static function getRecords($query) {
-        return self::_getDbConnection()->query($query)->fetchAll(\PDO::FETCH_ASSOC);
+        return self::_getDbConnection()->query($query)->fetchAll(PDO::FETCH_ASSOC);
     }
 
 }

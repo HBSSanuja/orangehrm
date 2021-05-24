@@ -54,12 +54,12 @@
         <oxd-divider />
 
         <oxd-form-actions>
-          <oxd-button displayType="secondary" label="Search" type="submit" />
+          <oxd-button displayType="ghost" label="Reset" @click="onClickReset" />
           <oxd-button
             class="orangehrm-left-space"
-            displayType="ghost"
-            label="Reset"
-            @click="onClickReset"
+            displayType="secondary"
+            label="Search"
+            type="submit"
           />
         </oxd-form-actions>
       </oxd-form>
@@ -117,12 +117,12 @@
 </template>
 
 <script>
-import {ref} from 'vue';
+import {computed, ref} from 'vue';
 import DeleteConfirmationDialog from '@orangehrm/components/dialogs/DeleteConfirmationDialog';
 import usePaginate from '@orangehrm/core/util/composable/usePaginate';
 import {navigate} from '@orangehrm/core/util/helper/navigation';
 import {APIService} from '@/core/util/services/api.service';
-import EmployeeDropdown from '@/orangehrmAdminPlugin/components/EmployeeDropdown';
+import EmployeeDropdown from '@/core/components/inputs/EmployeeDropdown';
 
 const userdataNormalizer = data => {
   return data.map(item => {
@@ -154,7 +154,12 @@ export default {
       headers: [
         {name: 'userName', title: 'Username', style: {flex: 1}},
         {name: 'role', title: 'User Role', style: {flex: 1}},
-        {name: 'empName', slot: 'title', title: 'Employee Name', style: {flex: 1}},
+        {
+          name: 'empName',
+          slot: 'title',
+          title: 'Employee Name',
+          style: {flex: 1},
+        },
         {name: 'status', title: 'Status', style: {flex: 1}},
         {
           name: 'actions',
@@ -213,6 +218,14 @@ export default {
 
   setup() {
     const filters = ref({...defaultFilters});
+    const serializedFilters = computed(() => {
+      return {
+        username: '',
+        userRoleId: filters.value.userRoleId.map(item => item.id)[0],
+        empNumber: filters.value.empNumber.map(item => item.id)[0],
+        status: filters.value.status.map(item => item.id)[0],
+      };
+    });
     const http = new APIService(window.appGlobal.baseUrl, 'api/v2/admin/users');
     const {
       showPaginator,
@@ -223,7 +236,7 @@ export default {
       response,
       isLoading,
       execQuery,
-    } = usePaginate(http, filters, userdataNormalizer);
+    } = usePaginate(http, serializedFilters, userdataNormalizer);
     return {
       http,
       showPaginator,

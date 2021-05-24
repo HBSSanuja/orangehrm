@@ -39,6 +39,14 @@ import SaveQualificationSkill from '@/orangehrmAdminPlugin/pages/qualificationSk
 import EditQualificationLicense from '@/orangehrmAdminPlugin/pages/qualificationLicense/EditLicense.vue';
 import SaveQualificationLicense from '@/orangehrmAdminPlugin/pages/qualificationLicense/SaveLicense.vue';
 import QualificationLicense from '@/orangehrmAdminPlugin/pages/qualificationLicense/License.vue';
+import PimPages from '@/orangehrmPimPlugin';
+import EditQualificationLanguage from '@/orangehrmAdminPlugin/pages/qualificationLanguage/EditQualificationLanguage.vue';
+import SaveQualificationLanguage from '@/orangehrmAdminPlugin/pages/qualificationLanguage/SaveQualificationLanguage.vue';
+import QualificationLanguage from '@/orangehrmAdminPlugin/pages/qualificationLanguage/QualificationLanguage.vue';
+import QualificationMembership from '@/orangehrmAdminPlugin/pages/qualificationMembership/QualificationMembership.vue';
+import EditQualificationMembership from '@/orangehrmAdminPlugin/pages/qualificationMembership/EditQualificationMembership.vue';
+import SaveQualificationMembership from '@/orangehrmAdminPlugin/pages/qualificationMembership/SaveQualificationMembership.vue';
+import ViewOrganizationGeneralInformation from '@/orangehrmAdminPlugin/pages/organizationGeneralInformation/ViewOrganizationGeneralInformation.vue';
 
 export default {
   'job-title-list': JobTitle,
@@ -64,4 +72,12 @@ export default {
   'license-list': QualificationLicense,
   'license-save': SaveQualificationLicense,
   'license-edit': EditQualificationLicense,
+  ...PimPages,
+  'qualification-language-list': QualificationLanguage,
+  'qualification-language-edit': EditQualificationLanguage,
+  'qualification-language-save': SaveQualificationLanguage,
+  'qualification-membership-list': QualificationMembership,
+  'qualification-membership-edit': EditQualificationMembership,
+  'qualification-membership-save': SaveQualificationMembership,
+  'organization-general-information-view': ViewOrganizationGeneralInformation,
 };
