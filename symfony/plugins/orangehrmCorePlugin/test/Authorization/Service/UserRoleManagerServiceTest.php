@@ -17,7 +17,7 @@
  * Boston, MA  02110-1301, USA
  */
 
-namespace OrangeHRM\Core\Tests\Authorization\Service;
+namespace OrangeHRM\Tests\Core\Authorization\Service;
 
 use OrangeHRM\Admin\Service\UserService;
 use OrangeHRM\Authentication\Service\AuthenticationService;
@@ -77,11 +77,13 @@ class UserRoleManagerServiceTest extends KernelTestCase
             ->will($this->returnValue(UnitTestUserRoleManager::class));
 
         $authenticationService = $this->getMockBuilder(AuthenticationService::class)
-            ->onlyMethods(['getLoggedInUserId'])
+            ->onlyMethods(['getLoggedInUserId', 'setLoggedInUserToAuthUserInstance'])
             ->getMock();
         $authenticationService->expects($this->once())
             ->method('getLoggedInUserId')
             ->will($this->returnValue(211));
+        $authenticationService->expects($this->once())
+            ->method('setLoggedInUserToAuthUserInstance');
 
         $systemUser = new User();
         $systemUser->setId(211);
@@ -122,7 +124,7 @@ class UserRoleManagerServiceTest extends KernelTestCase
             $this->fail("Should throw exception if user role manager is invalid");
         } catch (ServiceException $e) {
             $this->assertEquals(
-                'User Role Manager class OrangeHRM\Core\Tests\Authorization\Service\InvalidUserRoleManager is not a subclass of OrangeHRM\Core\Authorization\Manager\AbstractUserRoleManager',
+                'User Role Manager class OrangeHRM\Tests\Core\Authorization\Service\InvalidUserRoleManager is not a subclass of OrangeHRM\Core\Authorization\Manager\AbstractUserRoleManager',
                 $e->getMessage()
             );
         }

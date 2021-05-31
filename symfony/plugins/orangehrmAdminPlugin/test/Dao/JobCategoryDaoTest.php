@@ -17,7 +17,7 @@
  * Boston, MA  02110-1301, USA
  */
 
-namespace OrangeHRM\Admin\Tests\Dao;
+namespace OrangeHRM\Tests\Admin\Dao;
 
 use OrangeHRM\Admin\Dao\JobCategoryDao;
 use OrangeHRM\Config\Config;
@@ -27,6 +27,7 @@ use Exception;
 
 /**
  * @group Admin
+ * @group Dao
  */
 class JobCategoryDaoTest extends TestCase
 {

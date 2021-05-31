@@ -50,6 +50,10 @@
   padding-bottom: 1.2rem;
 }
 
+.orangehrm-top-padding {
+  padding-top: 1.2rem;
+}
+
 .orangehrm-horizontal-margin {
   margin-left: 1.2rem;
   margin-right: 1.2rem;
@@ -90,4 +94,9 @@
   & a {
     color: $oxd-interface-gray-darken-2-color;
   }
+}
+
+.orangehrm-sub-title {
+  padding: 0.25rem 0;
+  font-size: 1rem;
 }

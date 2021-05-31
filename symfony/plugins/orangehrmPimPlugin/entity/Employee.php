@@ -22,10 +22,9 @@ class Employee
     public const GENDER_MALE = 1;
     public const GENDER_FEMALE = 2;
 
-    public const UNMARRIED = 'Unmarried';
-    public const MARRIED = 'Married';
-    public const DIVORCED = 'Divorced';
-    public const OTHERS = 'Others';
+    public const MARITAL_STATUS_SINGLE = 'Single';
+    public const MARITAL_STATUS_MARRIED = 'Married';
+    public const MARITAL_STATUS_OTHER = 'Other';
 
     public const STATE_ACTIVE = 'ACTIVE';
     public const STATE_TERMINATED = 'TERMINATED';
@@ -381,22 +380,16 @@ class Employee
     private $locations;
 
     /**
-     * @var Collection
+     * @var Collection|EmpDependent[]
      *
-     * @ORM\ManyToMany(targetEntity="OrangeHRM\Entity\EmpDependent", mappedBy="Employee")
-     * @ORM\JoinColumns({
-     *   @ORM\JoinColumn(name="emp_number", referencedColumnName="emp_number")
-     * })
+     * @ORM\OneToMany(targetEntity="OrangeHRM\Entity\EmpDependent", mappedBy="employee")
      */
     private $dependents;
 
     /**
-     * @var Collection
+     * @var Collection|EmpEmergencyContact[]
      *
-     * @ORM\ManyToMany(targetEntity="OrangeHRM\Entity\EmpEmergencyContact", mappedBy="Employee")
-     * @ORM\JoinColumns({
-     *   @ORM\JoinColumn(name="emp_number", referencedColumnName="emp_number")
-     * })
+     * @ORM\OneToMany (targetEntity="OrangeHRM\Entity\EmpEmergencyContact", mappedBy="Employee")
      */
     private $emergencyContacts;
 
@@ -477,12 +470,9 @@ class Employee
     private $contracts;
 
     /**
-     * @var Collection
+     * @var Collection|EmployeeAttachment[]
      *
-     * @ORM\ManyToMany(targetEntity="OrangeHRM\Entity\EmployeeAttachment", mappedBy="Employee")
-     * @ORM\JoinColumns({
-     *   @ORM\JoinColumn(name="emp_number", referencedColumnName="emp_number")
-     * })
+     * @ORM\OneToMany(targetEntity="OrangeHRM\Entity\EmployeeAttachment", mappedBy="employee")
      */
     private $attachments;
 
@@ -1130,22 +1120,6 @@ class Employee
     public function setEmployeeTerminationRecord(?EmployeeTerminationRecord $employeeTerminationRecord): void
     {
         $this->employeeTerminationRecord = $employeeTerminationRecord;
-    }
-
-    /**
-     * @return ArrayCollection
-     */
-    public function getEducation(): ArrayCollection
-    {
-        return $this->education;
-    }
-
-    /**
-     * @param ArrayCollection $education
-     */
-    public function setEducation(ArrayCollection $education): void
-    {
-        $this->education = $education;
     }
 
     /**

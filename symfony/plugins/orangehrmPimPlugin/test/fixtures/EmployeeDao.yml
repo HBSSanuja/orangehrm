@@ -41,8 +41,9 @@ ReportTo:
   3: {erep_sup_emp_number: '3', erep_sub_emp_number: '1', erep_reporting_mode: '3'}
 
 EmpEmergencyContact:
-  0: {emp_number: '1', eec_seqno: '1', eec_name: 'Yasitha', eec_relationship: 'friend', home_phone: '0335445678', mobile_phone: '0776734567', eec_office_no: '0113456787'}
-  1: {emp_number: '2', eec_seqno: '2', eec_name: 'Renukshan', eec_relationship: 'friend1', home_phone: '0373245675', mobile_phone: '0776734237', eec_office_no: '0113676787'}
+  0: {emp_number: '1', eec_seqno: '1', eec_name: 'Yasitha', eec_relationship: 'friend', eec_home_no: '0335445678', eec_mobile_no: '0776734567', eec_office_no: '0113456787'}
+  1: {emp_number: '2', eec_seqno: '2', eec_name: 'Renukshan', eec_relationship: 'friend1', eec_home_no: '0373245675', eec_mobile_no: '0776734237', eec_office_no: '0113676787'}
+  2: {emp_number: '1', eec_seqno: '2', eec_name: 'Rashmi', eec_relationship: 'friend', eec_home_no: '0335445678', eec_mobile_no: '0776734567', eec_office_no: '0113456787'}
 
 EmpWorkExperience:
   0: {emp_number: '1', eexp_seqno: '1', eexp_employer: 'OrangeHRM', eexp_jobtit: 'SE', eexp_from_date: '2005-04-03', eexp_to_date: '2010-04-04', eexp_comments: 'Worked Hard', eexp_internal: '2'}
@@ -89,15 +90,15 @@ EmpDependent:
 #    0: {emp_number: '1', seqno: '1', ec_name: 'Anuradha', ec_date_of_birth: '2001-01-01'}
 #    1: {emp_number: '1', seqno: '2', ec_name: 'Sumith', ec_date_of_birth: '2003-01-09'}
 
-EmpPicture:
-    0: {emp_number: '1', epic_filename: 'test_file.jpg', epic_type: 'test/type', epic_file_size: '2000'}
+#EmpPicture:
+#    0: {emp_number: '1', epic_filename: 'test_file.jpg', epic_type: 'test/type', epic_file_size: '2000'}
 
 #Nationality:
 #    0: {id: 1, name: 'Test Nationality'}
 
-EmployeeAttachment:
-    0: {emp_number: '1', attach_id: '1', size: '1024', description: 'A file', filename: 'test.mdb', attachment: '', file_type: 'file/mdb', screen: 'personal', attached_by: '0', attached_by_name: 'admin'}
-    1: {emp_number: '1', attach_id: '2', size: '2024', description: '2nd file', filename: 'test2.mdb', attachment: '', file_type: 'file/mdb', screen: 'personal', attached_by: '0', attached_by_name: 'admin'}
+#EmployeeAttachment:
+#    0: {emp_number: '1', attach_id: '1', size: '1024', description: 'A file', filename: 'test.mdb', attachment: '', file_type: 'file/mdb', screen: 'personal', attached_by: '0', attached_by_name: 'admin'}
+#    1: {emp_number: '1', attach_id: '2', size: '2024', description: '2nd file', filename: 'test2.mdb', attachment: '', file_type: 'file/mdb', screen: 'personal', attached_by: '0', attached_by_name: 'admin'}
 
 #WorkShift:
 #    0: {id: 1, name: 'John Conner', hoursPerDay: 8}

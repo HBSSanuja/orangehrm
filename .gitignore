@@ -3,13 +3,11 @@ lib/confs/
 symfony/cache/
 symfony/config/
 symfony/log/
-symfony/web/
-symfony/apps/orangehrm/config/
-symfony/lib/vendor
+web/dist/
 symfony/vendor
 apidoc
-symfony/test/api/tests/_output/
 installer/log.txt
 logInsatall.log
 .phpunit.result.cache
 tests/node_modules
+coverage/

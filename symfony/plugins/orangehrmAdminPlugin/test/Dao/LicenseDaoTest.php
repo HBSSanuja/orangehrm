@@ -17,7 +17,7 @@
  * Boston, MA  02110-1301, USA
  */
 
-namespace OrangeHRM\Admin\Tests\Dao;
+namespace OrangeHRM\Tests\Admin\Dao;
 
 use Exception;
 use OrangeHRM\Admin\Dao\LicenseDao;
@@ -29,6 +29,7 @@ use OrangeHRM\Tests\Util\TestDataService;
 
 /**
  * @group Admin
+ * @group Dao
  */
 class LicenseDaoTest extends TestCase
 {

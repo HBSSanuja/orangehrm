@@ -1,0 +1,261 @@
+<!--
+/**
+ * OrangeHRM is a comprehensive Human Resource Management (HRM) System that captures
+ * all the essential functionalities required for any enterprise.
+ * Copyright (C) 2006 OrangeHRM Inc., http://www.orangehrm.com
+ *
+ * OrangeHRM is free software; you can redistribute it and/or modify it under the terms of
+ * the GNU General Public License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * OrangeHRM is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program;
+ * if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA  02110-1301, USA
+ */
+ -->
+
+<template>
+  <div class="orangehrm-attachment">
+    <oxd-divider />
+    <save-attachment
+      v-if="showSaveModal"
+      :http="http"
+      :allowed-file-types="allowedFileTypes"
+      @close="onSaveModalClose"
+    ></save-attachment>
+    <edit-attachment
+      v-else-if="showEditModal"
+      :data="editModalState"
+      :http="http"
+      :allowed-file-types="allowedFileTypes"
+      @close="onEditModalClose"
+    ></edit-attachment>
+    <template v-else>
+      <div
+        class="orangehrm-horizontal-padding
+        orangehrm-vertical-padding"
+      >
+        <profile-action-header @click="onClickAdd">
+          Attachments
+        </profile-action-header>
+      </div>
+      <oxd-divider class="orangehrm-horizontal-margin" />
+      <div class="orangehrm-horizontal-padding orangehrm-vertical-padding">
+        <div v-if="checkedItems.length > 0">
+          <oxd-text tag="span">
+            {{ itemsSelectedText }}
+          </oxd-text>
+          <oxd-button
+            label="Delete Selected"
+            iconName="trash-fill"
+            displayType="label-danger"
+            @click="onClickDeleteSelected"
+            class="orangehrm-horizontal-margin"
+          />
+        </div>
+        <oxd-text tag="span" v-else>{{ itemsCountText }}</oxd-text>
+      </div>
+      <div class="orangehrm-container">
+        <oxd-card-table
+          :headers="headers"
+          :items="items?.data"
+          :selectable="true"
+          :clickable="false"
+          :loading="isLoading"
+          v-model:selected="checkedItems"
+          rowDecorator="oxd-table-decorator-card"
+        />
+      </div>
+      <div v-if="showPaginator" class="orangehrm-bottom-container">
+        <oxd-pagination :length="pages" v-model:current="currentPage" />
+      </div>
+    </template>
+    <delete-confirmation ref="deleteDialog"></delete-confirmation>
+  </div>
+</template>
+
+<script>
+import {APIService} from '@/core/util/services/api.service';
+import usePaginate from '@orangehrm/core/util/composable/usePaginate';
+import SaveAttachment from '@/orangehrmPimPlugin/components/SaveAttachment';
+import EditAttachment from '@/orangehrmPimPlugin/components/EditAttachment';
+import ProfileActionHeader from '@/orangehrmPimPlugin/components/ProfileActionHeader';
+import DeleteConfirmationDialog from '@orangehrm/components/dialogs/DeleteConfirmationDialog.vue';
+
+export default {
+  name: 'profile-attachments',
+  components: {
+    'save-attachment': SaveAttachment,
+    'edit-attachment': EditAttachment,
+    'profile-action-header': ProfileActionHeader,
+    'delete-confirmation': DeleteConfirmationDialog,
+  },
+  props: {
+    employeeId: {
+      type: String,
+      required: true,
+    },
+    allowedFileTypes: {
+      type: Array,
+      required: true,
+    },
+    screen: {
+      type: String,
+      required: true,
+    },
+  },
+  setup(props) {
+    const http = new APIService(
+      window.appGlobal.baseUrl,
+      `api/v2/pim/employees/${props.employeeId}/screen/${props.screen}/attachments`,
+    );
+
+    const {
+      showPaginator,
+      currentPage,
+      total,
+      pages,
+      pageSize,
+      response,
+      isLoading,
+      execQuery,
+    } = usePaginate(http);
+    return {
+      http,
+      showPaginator,
+      currentPage,
+      isLoading,
+      total,
+      pages,
+      pageSize,
+      execQuery,
+      items: response,
+    };
+  },
+  data() {
+    return {
+      headers: [
+        {name: 'filename', slot: 'title', title: 'File Name', style: {flex: 1}},
+        {name: 'description', title: 'Description', style: {flex: 1}},
+        {name: 'size', title: 'Size', style: {flex: 1}},
+        {name: 'fileType', title: 'Type', style: {flex: 1}},
+        {name: 'attachedDate', title: 'Date Added', style: {flex: 1}},
+        {name: 'attachedByName', title: 'Added By', style: {flex: 1}},
+        {
+          name: 'actions',
+          title: 'Actions',
+          slot: 'action',
+          style: {flex: 1},
+          cellType: 'oxd-table-cell-actions',
+          cellConfig: {
+            delete: {
+              onClick: this.onClickDelete,
+              component: 'oxd-icon-button',
+              props: {
+                name: 'trash',
+              },
+            },
+            edit: {
+              onClick: this.onClickEdit,
+              props: {
+                name: 'pencil-fill',
+              },
+            },
+            download: {
+              onClick: this.onClickDownload,
+              props: {
+                name: 'download',
+              },
+            },
+          },
+        },
+      ],
+      checkedItems: [],
+      showSaveModal: false,
+      showEditModal: false,
+      editModalState: null,
+    };
+  },
+
+  computed: {
+    itemsCountText() {
+      return this.total === 0
+        ? 'No Attachments Found'
+        : `${this.total} Attachment(s) Found`;
+    },
+    itemsSelectedText() {
+      return `${this.checkedItems.length} Attachment(s) selected`;
+    },
+  },
+
+  methods: {
+    onClickDeleteSelected() {
+      const ids = this.checkedItems.map(index => {
+        return this.items?.data[index].id;
+      });
+      this.$refs.deleteDialog.showDialog().then(confirmation => {
+        if (confirmation === 'ok') {
+          this.deleteItems(ids);
+        }
+      });
+    },
+    onClickDelete(item) {
+      this.$refs.deleteDialog.showDialog().then(confirmation => {
+        if (confirmation === 'ok') {
+          this.deleteItems([item.id]);
+        }
+      });
+    },
+    deleteItems(items) {
+      if (items instanceof Array) {
+        this.isLoading = true;
+        this.http
+          .deleteAll({
+            ids: items,
+          })
+          .then(() => {
+            return this.$toast.success({
+              title: 'Success',
+              message: 'Successfully Deleted',
+            });
+          })
+          .then(() => {
+            this.isLoading = false;
+            this.resetDataTable();
+          });
+      }
+    },
+    async resetDataTable() {
+      this.checkedItems = [];
+      await this.execQuery();
+    },
+    onClickAdd() {
+      this.showEditModal = false;
+      this.editModalState = null;
+      this.showSaveModal = true;
+    },
+    onClickEdit(item) {
+      this.showSaveModal = false;
+      this.editModalState = item;
+      this.showEditModal = true;
+    },
+    onClickDownload(item) {
+      const downUrl = `${window.appGlobal.baseUrl}/pim/viewAttachment/empNumber/${this.employeeId}/attachId/${item.id}`;
+      window.open(downUrl, '_blank');
+    },
+    onSaveModalClose() {
+      this.showSaveModal = false;
+      this.resetDataTable();
+    },
+    onEditModalClose() {
+      this.showEditModal = false;
+      this.editModalState = null;
+      this.resetDataTable();
+    },
+  },
+};
+</script>
