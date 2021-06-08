@@ -95,6 +95,20 @@ final class Services
      */
     public const NORMALIZER_SERVICE = 'core.normalizer_service';
 
+    /**
+     * @see \OrangeHRM\Core\Authorization\Manager\AbstractUserRoleManager
+     */
+    public const USER_ROLE_MANAGER = 'core.authorization.user_role_manager';
+
+    ///////////////////////////////////////////////////////////////
+    /// Authentication plugin services
+    ///////////////////////////////////////////////////////////////
+
+    /**
+     * @see \OrangeHRM\Authentication\Auth\User
+     */
+    public const AUTH_USER = 'auth.user';
+
     ///////////////////////////////////////////////////////////////
     /// Admin plugin services
     ///////////////////////////////////////////////////////////////
@@ -103,6 +117,11 @@ final class Services
      * @see \OrangeHRM\Admin\Service\CountryService
      */
     public const COUNTRY_SERVICE = 'admin.country_service';
+
+    /**
+     * @see \OrangeHRM\Admin\Service\PayGradeService
+     */
+    public const PAY_GRADE_SERVICE = 'admin.pay_grade_service';
 
     /**
      * @see \OrangeHRM\Admin\Service\UserService
