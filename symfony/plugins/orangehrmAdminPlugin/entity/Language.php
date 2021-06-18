@@ -19,11 +19,11 @@
 
 namespace OrangeHRM\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Language
- *
  * @ORM\Table(name="ohrm_language")
  * @ORM\Entity
  */
@@ -44,6 +44,18 @@ class Language
      * @ORM\Column(name="name", type="string", length=120)
      */
     private string $name;
+
+    /**
+     * @var Collection|EmployeeLicense[]
+     *
+     * @ORM\OneToMany(targetEntity="OrangeHRM\Entity\EmployeeLanguage", mappedBy="language")
+     */
+    private $employeeLanguages;
+
+    public function __construct()
+    {
+        $this->employeeLanguages = new ArrayCollection();
+    }
 
     /**
      * @return int

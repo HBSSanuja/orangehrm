@@ -21,15 +21,14 @@ namespace OrangeHRM\Pim\Api;
 
 use OrangeHRM\Core\Api\CommonParams;
 use OrangeHRM\Core\Api\V2\Endpoint;
+use OrangeHRM\Core\Api\V2\EndpointResourceResult;
 use OrangeHRM\Core\Api\V2\RequestParams;
 use OrangeHRM\Core\Api\V2\ResourceEndpoint;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointDeleteResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetOneResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointUpdateResult;
 use OrangeHRM\Core\Api\V2\Validator\ParamRule;
 use OrangeHRM\Core\Api\V2\Validator\ParamRuleCollection;
 use OrangeHRM\Core\Api\V2\Validator\Rule;
 use OrangeHRM\Core\Api\V2\Validator\Rules;
+use OrangeHRM\Core\Traits\Service\DateTimeHelperTrait;
 use OrangeHRM\Entity\Employee;
 use OrangeHRM\Pim\Api\Model\EmployeeJobDetailModel;
 use OrangeHRM\Pim\Traits\Service\EmployeeServiceTrait;
@@ -37,6 +36,7 @@ use OrangeHRM\Pim\Traits\Service\EmployeeServiceTrait;
 class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
 {
     use EmployeeServiceTrait;
+    use DateTimeHelperTrait;
 
     public const PARAMETER_JOINED_DATE = 'joinedDate';
     public const PARAMETER_JOB_TITLE_ID = 'jobTitleId';
@@ -48,7 +48,7 @@ class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
     /**
      * @inheritDoc
      */
-    public function getOne(): EndpointGetOneResult
+    public function getOne(): EndpointResourceResult
     {
         $empNumber = $this->getRequestParams()->getInt(
             RequestParams::PARAM_TYPE_ATTRIBUTE,
@@ -56,7 +56,7 @@ class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
         );
         $employee = $this->getEmployeeService()->getEmployeeByEmpNumber($empNumber);
         $this->throwRecordNotFoundExceptionIfNotExist($employee, Employee::class);
-        return new EndpointGetOneResult(EmployeeJobDetailModel::class, $employee);
+        return new EndpointResourceResult(EmployeeJobDetailModel::class, $employee);
     }
 
     /**
@@ -75,7 +75,7 @@ class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
     /**
      * @inheritDoc
      */
-    public function update(): EndpointUpdateResult
+    public function update(): EndpointResourceResult
     {
         $empNumber = $this->getRequestParams()->getInt(
             RequestParams::PARAM_TYPE_ATTRIBUTE,
@@ -109,6 +109,7 @@ class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
             self::PARAMETER_LOCATION_ID
         );
 
+        $currentJoinedDate = $employee->getJoinedDate();
         $employee->setJoinedDate($joinedDate);
         $employee->getDecorator()->setJobTitleById($jobTitleId);
         $employee->getDecorator()->setEmpStatusById($empStatusId);
@@ -116,8 +117,13 @@ class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
         $employee->getDecorator()->setSubunitById($subunitId);
         $employee->getDecorator()->setLocationById($locationId);
 
-        $this->getEmployeeService()->saveEmployee($employee);
-        return new EndpointUpdateResult(EmployeeJobDetailModel::class, $employee);
+        $this->getEmployeeService()->updateEmployeeJobDetails($employee);
+
+        if (!$this->getDateTimeHelper()->isDatesEqual($currentJoinedDate, $employee->getJoinedDate(), true)) {
+            $this->getEmployeeService()->dispatchJoinedDateChangedEvent($employee, $currentJoinedDate);
+        }
+
+        return new EndpointResourceResult(EmployeeJobDetailModel::class, $employee);
     }
 
     /**
@@ -133,7 +139,7 @@ class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
             $this->getValidationDecorator()->notRequiredParamRule(
                 new ParamRule(
                     self::PARAMETER_JOINED_DATE,
-                    new Rule(Rules::DATE, ['Y-m-d'])
+                    new Rule(Rules::API_DATE)
                 )
             ),
             $this->getValidationDecorator()->notRequiredParamRule(
@@ -172,7 +178,7 @@ class EmployeeJobDetailAPI extends Endpoint implements ResourceEndpoint
     /**
      * @inheritDoc
      */
-    public function delete(): EndpointDeleteResult
+    public function delete(): EndpointResourceResult
     {
         throw $this->getNotImplementedException();
     }

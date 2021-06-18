@@ -20,12 +20,16 @@
 namespace OrangeHRM\Admin\Service;
 
 use OrangeHRM\Admin\Dao\JobTitleDao;
+use OrangeHRM\Admin\Service\Model\JobTitleModel;
 use OrangeHRM\Core\Exception\DaoException;
+use OrangeHRM\Core\Traits\Service\NormalizerServiceTrait;
 use OrangeHRM\Entity\JobSpecificationAttachment;
 use OrangeHRM\Entity\JobTitle;
 
 class JobTitleService
 {
+    use NormalizerServiceTrait;
+
     /**
      * @var JobTitleDao|null
      */
@@ -54,24 +58,12 @@ class JobTitleService
      * Returns JobTitlelist - By default this will returns the active jobTitle list
      * To get the all the jobTitles(with deleted) should pass the $activeOnly as false
      *
-     * @param string $sortField
-     * @param string $sortOrder
      * @param bool $activeOnly
-     * @param int|null $limit
-     * @param int|null $offset
-     * @param bool $count
      * @return int|JobTitle[]
      * @throws DaoException
      */
-    public function getJobTitleList(
-        string $sortField = 'jt.jobTitleName',
-        string $sortOrder = 'ASC',
-        bool $activeOnly = true,
-        ?int $limit = null,
-        ?int $offset = null,
-        bool $count = false
-    ) {
-        return $this->getJobTitleDao()->getJobTitleList($sortField, $sortOrder, $activeOnly, $limit, $offset, $count);
+    public function getJobTitleList(bool $activeOnly = true) {
+        return $this->getJobTitleDao()->getJobTitleList($activeOnly);
     }
 
     /**
@@ -140,6 +132,15 @@ class JobTitleService
         JobSpecificationAttachment $jobSpecificationAttachment
     ): JobSpecificationAttachment {
         return $this->getJobTitleDao()->deleteJobSpecificationAttachment($jobSpecificationAttachment);
+    }
+
+    /**
+     * @return array
+     */
+    public function getJobTitleArray(): array
+    {
+        $jobTitles = $this->getJobTitleList();
+        return $this->getNormalizerService()->normalizeArray(JobTitleModel::class, $jobTitles);
     }
 }
 

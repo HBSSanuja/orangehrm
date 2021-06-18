@@ -20,11 +20,9 @@
 namespace OrangeHRM\Pim\Api;
 
 use OrangeHRM\Core\Api\V2\Endpoint;
+use OrangeHRM\Core\Api\V2\EndpointResourceResult;
 use OrangeHRM\Core\Api\V2\RequestParams;
 use OrangeHRM\Core\Api\V2\ResourceEndpoint;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointDeleteResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetOneResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointUpdateResult;
 use OrangeHRM\Core\Api\V2\Validator\ParamRule;
 use OrangeHRM\Core\Api\V2\Validator\ParamRuleCollection;
 use OrangeHRM\Core\Api\V2\Validator\Rule;
@@ -64,7 +62,7 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
     public const PARAM_RULE_FIRST_NAME_MAX_LENGTH = 30;
     public const PARAM_RULE_MIDDLE_NAME_MAX_LENGTH = 30;
     public const PARAM_RULE_LAST_NAME_MAX_LENGTH = 30;
-    public const PARAM_RULE_EMPLOYEE_ID_MAX_LENGTH = 30;
+    public const PARAM_RULE_EMPLOYEE_ID_MAX_LENGTH = 50;
     public const PARAM_RULE_OTHER_ID_MAX_LENGTH = 100;
     public const PARAM_RULE_DRIVING_LICENSE_NO_MAX_LENGTH = 100;
     public const PARAM_RULE_MARTIAL_STATUS_MAX_LENGTH = 20;
@@ -76,13 +74,13 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
     /**
      * @inheritDoc
      */
-    public function getOne(): EndpointGetOneResult
+    public function getOne(): EndpointResourceResult
     {
         $empNumber = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, self::PARAMETER_EMP_NUMBER);
         $employee = $this->getEmployeeService()->getEmployeeByEmpNumber($empNumber);
         $this->throwRecordNotFoundExceptionIfNotExist($employee, Employee::class);
 
-        return new EndpointGetOneResult(EmployeePersonalDetailModel::class, $employee);
+        return new EndpointResourceResult(EmployeePersonalDetailModel::class, $employee);
     }
 
     /**
@@ -101,7 +99,7 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
     /**
      * @inheritDoc
      */
-    public function update(): EndpointUpdateResult
+    public function update(): EndpointResourceResult
     {
         $empNumber = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, self::PARAMETER_EMP_NUMBER);
         $employee = $this->getEmployeeService()->getEmployeeByEmpNumber($empNumber);
@@ -128,8 +126,8 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
                 self::PARAMETER_DRIVING_LICENSE_NO
             )
         );
-        $employee->getDecorator()->setDrivingLicenseExpiredDate(
-            $this->getRequestParams()->getStringOrNull(
+        $employee->setDrivingLicenseExpiredDate(
+            $this->getRequestParams()->getDateTimeOrNull(
                 RequestParams::PARAM_TYPE_BODY,
                 self::PARAMETER_DRIVING_LICENSE_EXPIRED_DATE
             )
@@ -140,8 +138,8 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
         $employee->setMaritalStatus(
             $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_MARTIAL_STATUS)
         );
-        $employee->getDecorator()->setBirthday(
-            $this->getRequestParams()->getStringOrNull(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_BIRTHDAY)
+        $employee->setBirthday(
+            $this->getRequestParams()->getDateTimeOrNull(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_BIRTHDAY)
         );
         $employee->getDecorator()->setNationality(
             $this->getRequestParams()->getIntOrNull(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_NATIONALITY_ID)
@@ -181,7 +179,7 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
 
         $this->getEmployeeService()->updateEmployeePersonalDetails($employee);
 
-        return new EndpointUpdateResult(EmployeePersonalDetailModel::class, $employee);
+        return new EndpointResourceResult(EmployeePersonalDetailModel::class, $employee);
     }
 
     /**
@@ -219,12 +217,13 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
                     new Rule(Rules::LENGTH, [null, self::PARAM_RULE_LAST_NAME_MAX_LENGTH]),
                 )
             ),
-            $this->getValidationDecorator()->requiredParamRule(
+            $this->getValidationDecorator()->notRequiredParamRule(
                 new ParamRule(
                     self::PARAMETER_EMPLOYEE_ID,
                     new Rule(Rules::STRING_TYPE),
                     new Rule(Rules::LENGTH, [null, self::PARAM_RULE_EMPLOYEE_ID_MAX_LENGTH]),
-                )
+                ),
+                true
             ),
             $this->getValidationDecorator()->notRequiredParamRule(
                 new ParamRule(
@@ -245,7 +244,7 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
             $this->getValidationDecorator()->notRequiredParamRule(
                 new ParamRule(
                     self::PARAMETER_DRIVING_LICENSE_EXPIRED_DATE,
-                    new Rule(Rules::DATE, ['Y-m-d']),
+                    new Rule(Rules::API_DATE),
                 )
             ),
             $this->getValidationDecorator()->notRequiredParamRule(
@@ -265,7 +264,7 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
             $this->getValidationDecorator()->notRequiredParamRule(
                 new ParamRule(
                     self::PARAMETER_BIRTHDAY,
-                    new Rule(Rules::DATE, ['Y-m-d']),
+                    new Rule(Rules::API_DATE),
                 )
             ),
             $this->getValidationDecorator()->notRequiredParamRule(
@@ -329,7 +328,7 @@ class EmployeePersonalDetailAPI extends Endpoint implements ResourceEndpoint
     /**
      * @inheritDoc
      */
-    public function delete(): EndpointDeleteResult
+    public function delete(): EndpointResourceResult
     {
         throw $this->getNotImplementedException();
     }

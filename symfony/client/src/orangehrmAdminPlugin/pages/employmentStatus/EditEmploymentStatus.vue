@@ -21,14 +21,16 @@
 <template>
   <div class="orangehrm-background-container">
     <div class="orangehrm-card-container">
-      <oxd-text tag="h6">Edit Employment Status</oxd-text>
+      <oxd-text tag="h6" class="orangehrm-main-title"
+        >Edit Employment Status</oxd-text
+      >
 
       <oxd-divider />
 
       <oxd-form @submitValid="onSave" :loading="isLoading">
         <oxd-form-row>
           <oxd-input-field
-            label="Employment Status Name"
+            label="Name"
             v-model="employmentStatus.name"
             :rules="rules.name"
             required
@@ -38,6 +40,7 @@
         <oxd-divider />
 
         <oxd-form-actions>
+          <required-text />
           <oxd-button
             type="button"
             displayType="ghost"
@@ -54,6 +57,7 @@
 <script>
 import {navigate} from '@orangehrm/core/util/helper/navigation';
 import {APIService} from '@orangehrm/core/util/services/api.service';
+import {required} from '@orangehrm/core/util/validation/rules';
 
 export default {
   props: {
@@ -66,7 +70,7 @@ export default {
   setup() {
     const http = new APIService(
       window.appGlobal.baseUrl,
-      'api/v2/admin/employment-statuses',
+      '/api/v2/admin/employment-statuses',
     );
     return {
       http,
@@ -75,6 +79,7 @@ export default {
 
   data() {
     return {
+      isLoading: false,
       employmentStatus: {
         id: '',
         name: '',
@@ -92,14 +97,10 @@ export default {
           name: this.employmentStatus.name,
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Employment Status updated successfully!',
-          });
+          return this.$toast.updateSuccess();
         })
         .then(() => {
           this.onCancel();
-          this.isLoading = false;
         });
     },
     onCancel() {
@@ -107,6 +108,7 @@ export default {
     },
   },
   created() {
+    this.isLoading = true;
     this.http
       .get(this.employmentStatusId)
       .then(response => {
@@ -118,9 +120,7 @@ export default {
       })
       .then(response => {
         const {data} = response.data;
-        this.rules.name.push(v => {
-          return (!!v && v.trim() !== '') || 'Required';
-        });
+        this.rules.name.push(required);
         this.rules.name.push(v => {
           return (v && v.length <= 50) || 'Should not exceed 50 characters';
         });
@@ -128,9 +128,7 @@ export default {
           const index = data.findIndex(item => item.name == v);
           if (index > -1) {
             const {id} = data[index];
-            return id != this.employmentStatus.id
-              ? 'Employee Status should be unique'
-              : true;
+            return id != this.employmentStatus.id ? 'Already exists' : true;
           } else {
             return true;
           }

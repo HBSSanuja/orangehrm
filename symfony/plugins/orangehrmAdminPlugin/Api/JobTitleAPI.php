@@ -20,23 +20,23 @@
 namespace OrangeHRM\Admin\Api;
 
 use OrangeHRM\Admin\Api\Model\JobTitleModel;
+use OrangeHRM\Admin\Dto\JobTitleSearchFilterParams;
 use OrangeHRM\Admin\Service\JobTitleService;
 use OrangeHRM\Core\Api\CommonParams;
 use OrangeHRM\Core\Api\V2\CrudEndpoint;
 use OrangeHRM\Core\Api\V2\Endpoint;
+use OrangeHRM\Core\Api\V2\EndpointCollectionResult;
+use OrangeHRM\Core\Api\V2\EndpointResourceResult;
+use OrangeHRM\Core\Api\V2\EndpointResult;
 use OrangeHRM\Core\Api\V2\Exception\RecordNotFoundException;
 use OrangeHRM\Core\Api\V2\Model\ArrayModel;
 use OrangeHRM\Core\Api\V2\ParameterBag;
 use OrangeHRM\Core\Api\V2\RequestParams;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointCreateResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointDeleteResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetAllResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetOneResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointUpdateResult;
 use OrangeHRM\Core\Api\V2\Validator\ParamRule;
 use OrangeHRM\Core\Api\V2\Validator\ParamRuleCollection;
 use OrangeHRM\Core\Api\V2\Validator\Rule;
 use OrangeHRM\Core\Api\V2\Validator\Rules;
+use OrangeHRM\Core\Dto\Base64Attachment;
 use OrangeHRM\Entity\JobSpecificationAttachment;
 use OrangeHRM\Entity\JobTitle;
 
@@ -54,10 +54,10 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
     public const PARAMETER_ACTIVE_ONLY = 'activeOnly';
     public const PARAMETER_CURRENT_JOB_SPECIFICATION = 'currentJobSpecification';
 
-    public const PARAMETER_SORT_FIELD = 'sortField';
-    public const PARAMETER_SORT_ORDER = 'sortOrder';
-    public const PARAMETER_OFFSET = 'offset';
-    public const PARAMETER_LIMIT = 'limit';
+    public const PARAM_RULE_TITLE_MAX_LENGTH = 100;
+    public const PARAM_RULE_DESCRIPTION_MAX_LENGTH = 400;
+    public const PARAM_RULE_NOTE_MAX_LENGTH = 400;
+    public const PARAM_RULE_SPECIFICATION_FILE_NAME_MAX_LENGTH = 200;
 
     public const JOB_SPECIFICATION_KEEP_CURRENT = 'keepCurrent';
     public const JOB_SPECIFICATION_DELETE_CURRENT = 'deleteCurrent';
@@ -85,7 +85,7 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function getOne(): EndpointGetOneResult
+    public function getOne(): EndpointResult
     {
         $id = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
         $jobTitle = $this->getJobTitleService()->getJobTitleById($id);
@@ -93,7 +93,7 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
             throw new RecordNotFoundException();
         }
 
-        return new EndpointGetOneResult(JobTitleModel::class, $jobTitle);
+        return new EndpointResourceResult(JobTitleModel::class, $jobTitle);
     }
 
     /**
@@ -109,37 +109,26 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function getAll(): EndpointGetAllResult
+    public function getAll(): EndpointResult
     {
-        $sortField = $this->getRequestParams()->getString(
-            RequestParams::PARAM_TYPE_QUERY,
-            self::PARAMETER_SORT_FIELD,
-            'jt.jobTitleName'
-        );
-        $sortOrder = $this->getRequestParams()->getString(
-            RequestParams::PARAM_TYPE_QUERY,
-            self::PARAMETER_SORT_ORDER,
-            'ASC'
-        );
+        $jobTitleSearchFilterParams = new JobTitleSearchFilterParams();
+        $this->setSortingAndPaginationParams($jobTitleSearchFilterParams);
+
         $activeOnly = $this->getRequestParams()->getBoolean(
             RequestParams::PARAM_TYPE_QUERY,
             self::PARAMETER_ACTIVE_ONLY,
             true
         );
-        $limit = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_QUERY, self::PARAMETER_LIMIT, 50);
-        $offset = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_QUERY, self::PARAMETER_OFFSET, 0);
+        $jobTitleSearchFilterParams->setActiveOnly($activeOnly);
 
-        $count = $this->getJobTitleService()->getJobTitleList(
-            $sortField,
-            $sortOrder,
-            $activeOnly,
-            $limit,
-            $offset,
-            true
+        $count = $this->getJobTitleService()->getJobTitleDao()->getJobTitlesCount($jobTitleSearchFilterParams);
+
+        $jobTitles = $this->getJobTitleService()->getJobTitleDao()->getJobTitles($jobTitleSearchFilterParams);
+        return new EndpointCollectionResult(
+            JobTitleModel::class,
+            $jobTitles,
+            new ParameterBag([CommonParams::PARAMETER_TOTAL => $count])
         );
-
-        $jobTitles = $this->getJobTitleService()->getJobTitleList($sortField, $sortOrder, $activeOnly, $limit, $offset);
-        return new EndpointGetAllResult(JobTitleModel::class, $jobTitles, new ParameterBag([CommonParams::PARAMETER_TOTAL => $count]));
     }
 
     /**
@@ -152,39 +141,81 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
                 self::PARAMETER_ACTIVE_ONLY,
                 new Rule(Rules::BOOL_VAL)
             ),
-            ...$this->getSortingAndPaginationParamsRules(['jt.jobTitleName'])
+            ...$this->getSortingAndPaginationParamsRules(JobTitleSearchFilterParams::ALLOWED_SORT_FIELDS)
         );
     }
 
     /**
      * @inheritDoc
      */
-    public function create(): EndpointCreateResult
+    public function create(): EndpointResult
     {
         // TODO:: Check data group permission
-        $params = $this->getPostParameters();
-        $jobTitleObj = new JobTitle();
-        $jobTitleObj->setIsDeleted(false);
-        $jobTitleObj->setJobTitleName($params[self::PARAMETER_TITLE]);
-        $jobTitleObj->setJobDescription($params[self::PARAMETER_DESCRIPTION]);
-        $jobTitleObj->setNote($params[self::PARAMETER_NOTE]);
-
-        $jobSpecification = $params[self::PARAMETER_SPECIFICATION];
+        $jobTitle = new JobTitle();
+        $this->setJobTitle($jobTitle);
+        $jobSpecification = $this->setJobSpecification(new JobSpecificationAttachment());
         if ($jobSpecification) {
-            // TODO:: validate file type and size
-            $jobSpecAttachment = new JobSpecificationAttachment();
-            $jobSpecAttachment->setFileName($jobSpecification['name']);
-            $jobSpecAttachment->setFileType($jobSpecification['type']);
-            $jobSpecAttachment->setFileSize($jobSpecification['size']);
-            $fileContent = base64_decode($jobSpecification['base64']);
-            $jobSpecAttachment->setFileContent($fileContent);
-            $jobTitleObj->setJobSpecificationAttachment($jobSpecAttachment);
-            $jobSpecAttachment->setJobTitle($jobTitleObj);
+            $jobTitle->setJobSpecificationAttachment($jobSpecification);
+            $jobSpecification->setJobTitle($jobTitle);
         }
 
-        $jobTitleObj = $this->getJobTitleService()->saveJobTitle($jobTitleObj);
+        $jobTitle = $this->getJobTitleService()->saveJobTitle($jobTitle);
 
-        return new EndpointCreateResult(JobTitleModel::class, $jobTitleObj);
+        return new EndpointResourceResult(JobTitleModel::class, $jobTitle);
+    }
+
+    /**
+     * @param JobTitle $jobTitle
+     */
+    private function setJobTitle(JobTitle $jobTitle): void
+    {
+        $jobTitle->setJobTitleName(
+            $this->getRequestParams()->getString(
+                RequestParams::PARAM_TYPE_BODY,
+                self::PARAMETER_TITLE
+            )
+        );
+        $jobTitle->setJobDescription(
+            $this->getRequestParams()->getString(
+                RequestParams::PARAM_TYPE_BODY,
+                self::PARAMETER_DESCRIPTION
+            )
+        );
+        $jobTitle->setNote(
+            $this->getRequestParams()->getString(
+                RequestParams::PARAM_TYPE_BODY,
+                self::PARAMETER_NOTE
+            )
+        );
+    }
+
+    /**
+     * @param JobSpecificationAttachment $jobSpecificationAttachment
+     * @return JobSpecificationAttachment|null
+     */
+    private function setJobSpecification(
+        JobSpecificationAttachment $jobSpecificationAttachment
+    ): ?JobSpecificationAttachment {
+        $base64Attachment = $this->getBase64JobSpecification();
+        if (is_null($base64Attachment)) {
+            return null;
+        }
+        $jobSpecificationAttachment->setFileName($base64Attachment->getFilename());
+        $jobSpecificationAttachment->setFileType($base64Attachment->getFileType());
+        $jobSpecificationAttachment->setFileSize($base64Attachment->getSize());
+        $jobSpecificationAttachment->setFileContent($base64Attachment->getContent());
+        return $jobSpecificationAttachment;
+    }
+
+    /**
+     * @return Base64Attachment|null
+     */
+    private function getBase64JobSpecification(): ?Base64Attachment
+    {
+        return $this->getRequestParams()->getAttachmentOrNull(
+            RequestParams::PARAM_TYPE_BODY,
+            self::PARAMETER_SPECIFICATION
+        );
     }
 
     /**
@@ -193,51 +224,103 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
     public function getValidationRuleForCreate(): ParamRuleCollection
     {
         return new ParamRuleCollection(
-            new ParamRule(self::PARAMETER_TITLE),
-            new ParamRule(self::PARAMETER_DESCRIPTION),
-            new ParamRule(self::PARAMETER_NOTE),
-            new ParamRule(self::PARAMETER_SPECIFICATION),
+            $this->getValidationDecorator()->notRequiredParamRule(
+                $this->getSpecificationRule()
+            ),
+            ...$this->getCommonBodyValidationRules(),
+        );
+    }
+
+    /**
+     * @return ParamRule[]
+     */
+    protected function getCommonBodyValidationRules(): array
+    {
+        return [
+            new ParamRule(
+                self::PARAMETER_TITLE,
+                new Rule(Rules::STRING_TYPE),
+                new Rule(Rules::LENGTH, [null, self::PARAM_RULE_TITLE_MAX_LENGTH]),
+            ),
+            $this->getValidationDecorator()->notRequiredParamRule(
+                new ParamRule(
+                    self::PARAMETER_DESCRIPTION,
+                    new Rule(Rules::STRING_TYPE),
+                    new Rule(Rules::LENGTH, [null, self::PARAM_RULE_DESCRIPTION_MAX_LENGTH]),
+                ),
+                true
+            ),
+            $this->getValidationDecorator()->notRequiredParamRule(
+                new ParamRule(
+                    self::PARAMETER_NOTE,
+                    new Rule(Rules::STRING_TYPE),
+                    new Rule(Rules::LENGTH, [null, self::PARAM_RULE_NOTE_MAX_LENGTH]),
+                ),
+                true
+            ),
+        ];
+    }
+
+    /**
+     * @return ParamRule
+     */
+    private function getSpecificationRule(): ParamRule
+    {
+        return new ParamRule(
+            self::PARAMETER_SPECIFICATION,
+            new Rule(
+                Rules::BASE_64_ATTACHMENT,
+                [null, self::PARAM_RULE_SPECIFICATION_FILE_NAME_MAX_LENGTH]
+            )
         );
     }
 
     /**
      * @inheritDoc
      */
-    public function update(): EndpointUpdateResult
+    public function update(): EndpointResult
     {
         // TODO:: Check data group permission
-        $params = $this->getPostParameters();
-        $jobTitleObj = $this->getJobTitleService()->getJobTitleById($params[CommonParams::PARAMETER_ID]);
-        $jobTitleObj->setJobTitleName($params[self::PARAMETER_TITLE]);
-        $jobTitleObj->setJobDescription($params[self::PARAMETER_DESCRIPTION]);
-        $jobTitleObj->setNote($params[self::PARAMETER_NOTE]);
+        $id = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
+        $currentJobSpecification = $this->getRequestParams()->getString(
+            RequestParams::PARAM_TYPE_BODY,
+            self::PARAMETER_CURRENT_JOB_SPECIFICATION
+        );
 
-        if ($params[self::PARAMETER_CURRENT_JOB_SPECIFICATION] === self::JOB_SPECIFICATION_DELETE_CURRENT) {
-            $jobSpecAttachment = $jobTitleObj->getJobSpecificationAttachment();
-            if ($jobSpecAttachment instanceof JobSpecificationAttachment) {
-                $this->getJobTitleService()->deleteJobSpecificationAttachment($jobSpecAttachment);
-            }
-            $jobTitleObj->setJobSpecificationAttachment(null);
-        } elseif ($params[self::PARAMETER_CURRENT_JOB_SPECIFICATION] === self::JOB_SPECIFICATION_REPLACE_CURRENT) {
-            if ($params[self::PARAMETER_SPECIFICATION]) {
-                $jobSpecification = $params[self::PARAMETER_SPECIFICATION];
-                $jobSpecAttachment = $jobTitleObj->getJobSpecificationAttachment();
-                if (!$jobSpecAttachment instanceof JobSpecificationAttachment) {
-                    $jobSpecAttachment = new JobSpecificationAttachment();
-                }
-                $jobSpecAttachment->setFileName($jobSpecification['name']);
-                $jobSpecAttachment->setFileType($jobSpecification['type']);
-                $jobSpecAttachment->setFileSize($jobSpecification['size']);
-                $fileContent = base64_decode($jobSpecification['base64']);
-                $jobSpecAttachment->setFileContent($fileContent);
-                $this->getJobTitleService()->saveJobSpecificationAttachment($jobSpecAttachment);
-            }
-            $jobTitleObj->setJobSpecificationAttachment($jobSpecAttachment);
+        $jobTitle = $this->getJobTitleService()->getJobTitleById($id);
+        $this->throwRecordNotFoundExceptionIfNotExist($jobTitle, JobTitle::class);
+        $this->setJobTitle($jobTitle);
+
+        $jobSpecification = $jobTitle->getJobSpecificationAttachment();
+        $base64Attachment = $this->getBase64JobSpecification();
+
+        if (!$jobSpecification instanceof JobSpecificationAttachment && $currentJobSpecification) {
+            throw $this->getBadRequestException(
+                "`" . self::PARAMETER_CURRENT_JOB_SPECIFICATION . "` should not define if there is no job specification"
+            );
+        } elseif ($jobSpecification instanceof JobSpecificationAttachment && !$currentJobSpecification) {
+            throw $this->getBadRequestException(
+                "`" . self::PARAMETER_CURRENT_JOB_SPECIFICATION . "` should define if there is a job specification"
+            );
         }
-        $jobTitleObj->setId($jobTitleObj->getId());
-        $jobTitleObj = $this->getJobTitleService()->saveJobTitle($jobTitleObj);
 
-        return new EndpointUpdateResult(JobTitleModel::class, $jobTitleObj);
+        if (!$jobSpecification instanceof JobSpecificationAttachment && $base64Attachment) {
+            $jobSpecification = new JobSpecificationAttachment();
+            $this->setJobSpecification($jobSpecification);
+            $jobTitle->setJobSpecificationAttachment($jobSpecification);
+            $jobSpecification->setJobTitle($jobTitle);
+        } elseif ($currentJobSpecification === self::JOB_SPECIFICATION_DELETE_CURRENT) {
+            $jobTitle->setJobSpecificationAttachment(null);
+            $this->getJobTitleService()->deleteJobSpecificationAttachment($jobSpecification);
+        } elseif ($currentJobSpecification === self::JOB_SPECIFICATION_REPLACE_CURRENT) {
+            $this->setJobSpecification($jobSpecification);
+            $jobTitle->setJobSpecificationAttachment($jobSpecification);
+            $jobSpecification->setJobTitle($jobTitle);
+        } // else self::JOB_SPECIFICATION_KEEP_CURRENT
+
+        $this->getJobTitleService()->saveJobTitle($jobTitle);
+
+        return new EndpointResourceResult(JobTitleModel::class, $jobTitle);
     }
 
     /**
@@ -245,27 +328,55 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
      */
     public function getValidationRuleForUpdate(): ParamRuleCollection
     {
-        return new ParamRuleCollection(
+        $currentJobSpecification = $this->getRequestParams()->getStringOrNull(
+            RequestParams::PARAM_TYPE_BODY,
+            self::PARAMETER_CURRENT_JOB_SPECIFICATION
+        );
+        $paramRules = new ParamRuleCollection(
             new ParamRule(
                 CommonParams::PARAMETER_ID,
                 new Rule(Rules::POSITIVE)
             ),
-            new ParamRule(self::PARAMETER_TITLE),
-            new ParamRule(self::PARAMETER_DESCRIPTION),
-            new ParamRule(self::PARAMETER_NOTE),
-            new ParamRule(self::PARAMETER_SPECIFICATION),
-            new ParamRule(self::PARAMETER_CURRENT_JOB_SPECIFICATION),
+            $this->getValidationDecorator()->notRequiredParamRule(
+                new ParamRule(
+                    self::PARAMETER_CURRENT_JOB_SPECIFICATION,
+                    new Rule(
+                        Rules::IN,
+                        [
+                            [
+                                self::JOB_SPECIFICATION_KEEP_CURRENT,
+                                self::JOB_SPECIFICATION_DELETE_CURRENT,
+                                self::JOB_SPECIFICATION_REPLACE_CURRENT
+                            ]
+                        ]
+                    ),
+                )
+            ),
+            ...$this->getCommonBodyValidationRules(),
         );
+        if (!in_array(
+            $currentJobSpecification,
+            [self::JOB_SPECIFICATION_KEEP_CURRENT, self::JOB_SPECIFICATION_DELETE_CURRENT]
+        )) {
+            if (is_null($currentJobSpecification)) {
+                $paramRules->addParamValidation(
+                    $this->getValidationDecorator()->notRequiredParamRule($this->getSpecificationRule())
+                );
+            } elseif ($currentJobSpecification === self::JOB_SPECIFICATION_REPLACE_CURRENT) {
+                $paramRules->addParamValidation($this->getSpecificationRule());
+            }
+        }
+        return $paramRules;
     }
 
     /**
      * @inheritDoc
      */
-    public function delete(): EndpointDeleteResult
+    public function delete(): EndpointResult
     {
         $ids = $this->getRequestParams()->getArray(RequestParams::PARAM_TYPE_BODY, CommonParams::PARAMETER_IDS);
         $this->getJobTitleService()->deleteJobTitle($ids);
-        return new EndpointDeleteResult(ArrayModel::class, $ids);
+        return new EndpointResourceResult(ArrayModel::class, $ids);
     }
 
     /**
@@ -276,38 +387,5 @@ class JobTitleAPI extends Endpoint implements CrudEndpoint
         return new ParamRuleCollection(
             new ParamRule(CommonParams::PARAMETER_IDS),
         );
-    }
-
-    /**
-     * @return array
-     */
-    public function getPostParameters(): array
-    {
-        $params = [];
-        $params[CommonParams::PARAMETER_ID] = $this->getRequestParams()->getInt(
-            RequestParams::PARAM_TYPE_ATTRIBUTE,
-            CommonParams::PARAMETER_ID
-        );
-        $params[self::PARAMETER_TITLE] = $this->getRequestParams()->getString(
-            RequestParams::PARAM_TYPE_BODY,
-            self::PARAMETER_TITLE
-        );
-        $params[self::PARAMETER_DESCRIPTION] = $this->getRequestParams()->getString(
-            RequestParams::PARAM_TYPE_BODY,
-            self::PARAMETER_DESCRIPTION
-        );
-        $params[self::PARAMETER_NOTE] = $this->getRequestParams()->getString(
-            RequestParams::PARAM_TYPE_BODY,
-            self::PARAMETER_NOTE
-        );
-        $params[self::PARAMETER_SPECIFICATION] = $this->getRequestParams()->getArrayOrNull(
-            RequestParams::PARAM_TYPE_BODY,
-            self::PARAMETER_SPECIFICATION
-        );
-        $params[self::PARAMETER_CURRENT_JOB_SPECIFICATION] = $this->getRequestParams()->getString(
-            RequestParams::PARAM_TYPE_BODY,
-            self::PARAMETER_CURRENT_JOB_SPECIFICATION
-        );
-        return $params;
     }
 }

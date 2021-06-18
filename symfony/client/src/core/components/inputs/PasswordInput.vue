@@ -63,6 +63,7 @@ import {
   checkPassword,
   getPassLevel,
 } from '@orangehrm/core/util/helper/password';
+import {required} from '@orangehrm/core/util/validation/rules';
 
 export default {
   name: 'password-input',
@@ -83,12 +84,12 @@ export default {
     return {
       rules: {
         password: [
-          v => (!!v && v.trim() !== '') || 'Required',
+          required,
           v => (v && v.length <= 64) || 'Should not exceed 64 characters',
           v => checkPassword(v),
         ],
         passwordConfirm: [
-          v => (!!v && v.trim() !== '') || 'Required',
+          required,
           v => (!!v && v === this.password) || 'Passwords do not match',
         ],
       },
@@ -125,6 +126,8 @@ export default {
 <style lang="scss" scoped>
 .user-password {
   &-row {
+    padding-top: 10px;
+    padding-bottom: 10px;
     background-color: $oxd-background-white-shadow-color;
     border-radius: 0.75rem;
   }
@@ -139,8 +142,8 @@ export default {
     font-weight: 600;
     font-size: 0.75rem;
     position: absolute;
-    right: 15px;
-    top: 10px;
+    right: 8px;
+    top: 0px;
     &.--green {
       background-color: $oxd-secondary-four-color;
     }

@@ -21,14 +21,16 @@
 <template>
   <div class="orangehrm-background-container">
     <div class="orangehrm-card-container">
-      <oxd-text tag="h6">Save Job Category</oxd-text>
+      <oxd-text tag="h6" class="orangehrm-main-title">
+        Add Job Category
+      </oxd-text>
 
       <oxd-divider />
 
       <oxd-form :loading="isLoading" @submitValid="onSave">
         <oxd-form-row>
           <oxd-input-field
-            label="Job Category Name"
+            label="Name"
             v-model="category.name"
             :rules="rules.name"
             required
@@ -38,6 +40,7 @@
         <oxd-divider />
 
         <oxd-form-actions>
+          <required-text />
           <oxd-button
             type="button"
             displayType="ghost"
@@ -54,6 +57,7 @@
 <script>
 import {navigate} from '@orangehrm/core/util/helper/navigation';
 import {APIService} from '@/core/util/services/api.service';
+import {required} from '@orangehrm/core/util/validation/rules';
 
 export default {
   data() {
@@ -88,14 +92,9 @@ export default {
           name: this.category.name,
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Job category added successfully!',
-          });
+          return this.$toast.addSuccess();
         })
         .then(() => {
-          this.category.name = '';
-          this.isLoading = false;
           this.onCancel();
         });
     },
@@ -110,15 +109,13 @@ export default {
       .getAll()
       .then(response => {
         const {data} = response.data;
-        this.rules.name.push(v => {
-          return (!!v && v.trim() !== '') || 'Required';
-        });
+        this.rules.name.push(required);
         this.rules.name.push(v => {
           return (v && v.length <= 50) || 'Should not exceed 50 characters';
         });
         this.rules.name.push(v => {
           const index = data.findIndex(item => item.name == v);
-          return index === -1 || 'Job category name should be unique';
+          return index === -1 || 'Already exists';
         });
         this.isLoading = false;
       })

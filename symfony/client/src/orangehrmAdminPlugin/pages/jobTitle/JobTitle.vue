@@ -22,7 +22,7 @@
   <div class="orangehrm-background-container">
     <div class="orangehrm-paper-container">
       <div class="orangehrm-header-container">
-        <oxd-text tag="h6">Job Title List</oxd-text>
+        <oxd-text tag="h6" class="orangehrm-main-title">Job Titles</oxd-text>
         <div>
           <oxd-button
             label="Add"
@@ -32,24 +32,12 @@
           />
         </div>
       </div>
-      <oxd-divider class="orangehrm-horizontal-margin" />
-      <div>
-        <div class="orangehrm-horizontal-padding orangehrm-vertical-padding">
-          <div v-if="checkedItems.length > 0">
-            <oxd-text tag="span">
-              {{ checkedItems.length }} Job Title Selected
-            </oxd-text>
-            <oxd-button
-              label="Delete Selected"
-              iconName="trash-fill"
-              displayType="label-danger"
-              @click="onClickDeleteSelected"
-              class="orangehrm-horizontal-margin"
-            />
-          </div>
-          <oxd-text tag="span" v-else>{{ itemsCountText }}</oxd-text>
-        </div>
-      </div>
+      <table-header
+        :selected="checkedItems.length"
+        :total="total"
+        :loading="isLoading"
+        @delete="onClickDeleteSelected"
+      ></table-header>
       <div class="orangehrm-container">
         <oxd-card-table
           :headers="headers"
@@ -85,7 +73,7 @@ export default {
     return {
       headers: [
         {name: 'title', slot: 'title', title: 'Job Title', style: {flex: 2}},
-        {name: 'description', title: 'Description', style: {flex: 4}},
+        {name: 'description', title: 'Job Description', style: {flex: 4}},
         {
           name: 'actions',
           title: 'Actions',
@@ -120,7 +108,7 @@ export default {
   setup() {
     const http = new APIService(
       window.appGlobal.baseUrl,
-      'api/v2/admin/job-titles',
+      '/api/v2/admin/job-titles',
     );
     const {
       showPaginator,
@@ -143,14 +131,6 @@ export default {
       execQuery,
       items: response,
     };
-  },
-
-  computed: {
-    itemsCountText() {
-      return this.total === 0
-        ? 'No Records Found'
-        : `${this.total} Job Title Found`;
-    },
   },
 
   methods: {
@@ -186,10 +166,7 @@ export default {
             ids: items,
           })
           .then(() => {
-            return this.$toast.success({
-              title: 'Success',
-              message: 'Job title deleted successfully!',
-            });
+            return this.$toast.deleteSuccess();
           })
           .then(() => {
             this.isLoading = false;

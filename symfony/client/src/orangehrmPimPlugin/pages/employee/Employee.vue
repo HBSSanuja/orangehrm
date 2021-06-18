@@ -80,24 +80,12 @@
           @click="onClickAdd"
         />
       </div>
-      <oxd-divider class="orangehrm-horizontal-margin" />
-      <div>
-        <div class="orangehrm-horizontal-padding orangehrm-vertical-padding">
-          <div v-if="checkedItems.length > 0">
-            <oxd-text tag="span">
-              {{ checkedItems.length }} Employee(s) Selected
-            </oxd-text>
-            <oxd-button
-              label="Delete Selected"
-              iconName="trash-fill"
-              displayType="label-danger"
-              @click="onClickDeleteSelected"
-              class="orangehrm-horizontal-margin"
-            />
-          </div>
-          <oxd-text tag="span" v-else>{{ itemsCountText }}</oxd-text>
-        </div>
-      </div>
+      <table-header
+        :selected="checkedItems.length"
+        :total="total"
+        :loading="isLoading"
+        @delete="onClickDeleteSelected"
+      ></table-header>
       <div class="orangehrm-container">
         <oxd-card-table
           :headers="headers"
@@ -140,9 +128,9 @@ const userdataNormalizer = data => {
     return {
       id: item.empNumber,
       employeeId: item.employeeId,
-      firstName: item.firstName,
+      firstAndMiddleName: `${item.firstName} ${item.middleName}`,
       lastName: item.lastName,
-      jobtitle: item.jobTitle?.title,
+      jobTitle: item.jobTitle?.title,
       empStatus: item.empStatus?.name,
       subunit: item.subunit?.name,
       supervisor: item.supervisors
@@ -177,11 +165,15 @@ export default {
   data() {
     return {
       headers: [
-        {name: 'employeeId', slot: 'title', title: 'EID', style: {flex: 1}},
-        {name: 'firstName', title: 'First Name', style: {flex: 1}},
+        {name: 'employeeId', slot: 'title', title: 'Id', style: {flex: 1}},
+        {
+          name: 'firstAndMiddleName',
+          title: 'First (& Middle) Name',
+          style: {flex: 1},
+        },
         {name: 'lastName', title: 'Last Name', style: {flex: 1}},
-        {name: 'jobtitle', title: 'Job Title', style: {flex: 1}},
-        {name: 'empStatus', title: 'Employee Status', style: {flex: 1}},
+        {name: 'jobTitle', title: 'Job Title', style: {flex: 1}},
+        {name: 'empStatus', title: 'Employment Status', style: {flex: 1}},
         {name: 'subunit', title: 'Sub Unit', style: {flex: 1}},
         {name: 'supervisor', title: 'Supervisor', style: {flex: 1}},
         {
@@ -294,14 +286,6 @@ export default {
     };
   },
 
-  computed: {
-    itemsCountText() {
-      return this.total === 0
-        ? 'No Records Found'
-        : `${this.total} Employee(s) Found`;
-    },
-  },
-
   methods: {
     onClickAdd() {
       navigate('/pim/addEmployee');
@@ -334,10 +318,7 @@ export default {
             ids: items,
           })
           .then(() => {
-            return this.$toast.success({
-              title: 'Success',
-              message: 'User deleted successfully!',
-            });
+            return this.$toast.deleteSuccess();
           })
           .then(() => {
             this.isLoading = false;

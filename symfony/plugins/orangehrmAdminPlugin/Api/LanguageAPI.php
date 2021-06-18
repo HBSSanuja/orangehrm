@@ -26,15 +26,12 @@ use OrangeHRM\Admin\Service\LanguageService;
 use OrangeHRM\Core\Api\CommonParams;
 use OrangeHRM\Core\Api\V2\CrudEndpoint;
 use OrangeHRM\Core\Api\V2\Endpoint;
+use OrangeHRM\Core\Api\V2\EndpointCollectionResult;
+use OrangeHRM\Core\Api\V2\EndpointResourceResult;
 use OrangeHRM\Core\Api\V2\Exception\RecordNotFoundException;
 use OrangeHRM\Core\Api\V2\Model\ArrayModel;
 use OrangeHRM\Core\Api\V2\ParameterBag;
 use OrangeHRM\Core\Api\V2\RequestParams;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointCreateResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointDeleteResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetAllResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetOneResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointUpdateResult;
 use OrangeHRM\Core\Api\V2\Validator\ParamRule;
 use OrangeHRM\Core\Api\V2\Validator\ParamRuleCollection;
 use OrangeHRM\Core\Api\V2\Validator\Rule;
@@ -77,15 +74,13 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
      * @throws RecordNotFoundException
      * @throws Exception
      */
-    public function getOne(): EndpointGetOneResult
+    public function getOne(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $id = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
         $language = $this->getLanguageService()->getLanguageById($id);
-        if (!$language instanceof Language) {
-            throw new RecordNotFoundException();
-        }
-        return new EndpointGetOneResult(LanguageModel::class, $language);
+        $this->throwRecordNotFoundExceptionIfNotExist($language, Language::class);
+        return new EndpointResourceResult(LanguageModel::class, $language);
     }
 
     /**
@@ -94,7 +89,8 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
     public function getValidationRuleForGetOne(): ParamRuleCollection
     {
         return new ParamRuleCollection(
-            new ParamRule(CommonParams::PARAMETER_ID,
+            new ParamRule(
+                CommonParams::PARAMETER_ID,
                 new Rule(Rules::POSITIVE)
             ),
         );
@@ -104,7 +100,7 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
      * @inheritDoc
      * @throws Exception
      */
-    public function getAll(): EndpointGetAllResult
+    public function getAll(): EndpointCollectionResult
     {
         // TODO:: Check data group permission
 
@@ -112,7 +108,7 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
         $this->setSortingAndPaginationParams($languageParamHolder);
         $languages = $this->getLanguageService()->getLanguageList($languageParamHolder);
         $count = $this->getLanguageService()->getLanguageCount($languageParamHolder);
-        return new EndpointGetAllResult(
+        return new EndpointCollectionResult(
             LanguageModel::class,
             $languages,
             new ParameterBag([CommonParams::PARAMETER_TOTAL => $count])
@@ -133,12 +129,11 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
      * @inheritDoc
      * @throws Exception
      */
-    public function create(): EndpointCreateResult
+    public function create(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $languages = $this->saveLanguage();
-
-        return new EndpointCreateResult(LanguageModel::class, $languages);
+        return new EndpointResourceResult(LanguageModel::class, $languages);
     }
 
     /**
@@ -147,7 +142,8 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
     public function getValidationRuleForCreate(): ParamRuleCollection
     {
         return new ParamRuleCollection(
-            new ParamRule(self::PARAMETER_NAME,
+            new ParamRule(
+                self::PARAMETER_NAME,
                 new Rule(Rules::STRING_TYPE),
                 new Rule(Rules::LENGTH, [null, self::PARAM_RULE_NAME_MAX_LENGTH]),
             ),
@@ -164,15 +160,12 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
     {
         $id = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
         $name = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_NAME);
-        if (!empty($id)) {
+        if ($id) {
             $language = $this->getLanguageService()->getLanguageById($id);
-            if ($language == null) {
-                throw new RecordNotFoundException();
-            }
+            $this->throwRecordNotFoundExceptionIfNotExist($language, Language::class);
         } else {
             $language = new Language();
         }
-
         $language->setName($name);
         return $this->getLanguageService()->saveLanguage($language);
     }
@@ -184,7 +177,8 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
     {
         return new ParamRuleCollection(
             new ParamRule(CommonParams::PARAMETER_ID),
-            new ParamRule(self::PARAMETER_NAME,
+            new ParamRule(
+                self::PARAMETER_NAME,
                 new Rule(Rules::STRING_TYPE),
                 new Rule(Rules::LENGTH, [null, self::PARAM_RULE_NAME_MAX_LENGTH]),
             ),
@@ -195,12 +189,11 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
      * @inheritDoc
      * @throws Exception
      */
-    public function update(): EndpointUpdateResult
+    public function update(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $languages = $this->saveLanguage();
-
-        return new EndpointUpdateResult(LanguageModel::class, $languages);
+        return new EndpointResourceResult(LanguageModel::class, $languages);
     }
 
     /**
@@ -209,10 +202,12 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
     public function getValidationRuleForUpdate(): ParamRuleCollection
     {
         return new ParamRuleCollection(
-            new ParamRule(CommonParams::PARAMETER_ID,
+            new ParamRule(
+                CommonParams::PARAMETER_ID,
                 new Rule(Rules::POSITIVE)
             ),
-            new ParamRule(self::PARAMETER_NAME,
+            new ParamRule(
+                self::PARAMETER_NAME,
                 new Rule(Rules::STRING_TYPE),
                 new Rule(Rules::LENGTH, [null, self::PARAM_RULE_NAME_MAX_LENGTH]),
             ),
@@ -221,15 +216,15 @@ class LanguageAPI extends EndPoint implements CrudEndpoint
 
     /**
      *
-     * @return EndpointDeleteResult
+     * @return EndpointResourceResult
      * @throws Exception
      */
-    public function delete(): EndpointDeleteResult
+    public function delete(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $ids = $this->getRequestParams()->getArray(RequestParams::PARAM_TYPE_BODY, CommonParams::PARAMETER_IDS);
         $this->getLanguageService()->deleteLanguages($ids);
-        return new EndpointDeleteResult(ArrayModel::class, $ids);
+        return new EndpointResourceResult(ArrayModel::class, $ids);
     }
 
     /**

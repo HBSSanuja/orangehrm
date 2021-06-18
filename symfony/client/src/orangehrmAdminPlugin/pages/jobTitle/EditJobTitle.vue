@@ -21,7 +21,7 @@
 <template>
   <div class="orangehrm-background-container">
     <div class="orangehrm-card-container">
-      <oxd-text tag="h6">Edit Job Title</oxd-text>
+      <oxd-text tag="h6" class="orangehrm-main-title">Edit Job Title</oxd-text>
 
       <oxd-divider />
 
@@ -76,6 +76,7 @@
         <oxd-divider />
 
         <oxd-form-actions>
+          <required-text />
           <oxd-button displayType="ghost" label="Cancel" @click="onCancel" />
           <submit-button />
         </oxd-form-actions>
@@ -87,6 +88,7 @@
 <script>
 import {navigate} from '@orangehrm/core/util/helper/navigation';
 import {APIService} from '@/core/util/services/api.service';
+import {required} from '@orangehrm/core/util/validation/rules';
 
 const initialJobTitle = {
   title: '',
@@ -152,14 +154,10 @@ export default {
           ...this.jobTitle,
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Job title updated successfully!',
-          });
+          return this.$toast.updateSuccess();
         })
         .then(() => {
           // go back
-          this.isLoading = false;
           this.onCancel();
         });
     },
@@ -177,9 +175,7 @@ export default {
       })
       .then(response => {
         const {data} = response.data;
-        this.rules.title.push(v => {
-          return (!!v && v.trim() !== '') || 'Required';
-        });
+        this.rules.title.push(required);
         this.rules.title.push(v => {
           return (v && v.length <= 100) || 'Should not exceed 100 characters';
         });
@@ -187,7 +183,7 @@ export default {
           const index = data.findIndex(item => item.title == v);
           if (index > -1) {
             const {id} = data[index];
-            return id != this.jobTitle.id ? 'Job title should be unique' : true;
+            return id != this.jobTitle.id ? ' Already exists' : true;
           } else {
             return true;
           }

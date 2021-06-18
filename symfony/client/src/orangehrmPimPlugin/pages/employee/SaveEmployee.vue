@@ -21,7 +21,7 @@
 <template>
   <div class="orangehrm-background-container">
     <div class="orangehrm-card-container">
-      <oxd-text tag="h6">Add Employee</oxd-text>
+      <oxd-text tag="h6" class="orangehrm-main-title">Add Employee</oxd-text>
       <oxd-divider />
 
       <oxd-form :loading="isLoading" @submitValid="onSave">
@@ -124,6 +124,10 @@ import SwitchInput from '@orangehrm/oxd/core/components/Input/SwitchInput';
 import ProfileImageInput from '@/orangehrmPimPlugin/components/ProfileImageInput';
 import FullNameInput from '@/orangehrmPimPlugin/components/FullNameInput';
 import PasswordInput from '@/core/components/inputs/PasswordInput';
+import {
+  required,
+  shouldNotExceedCharLength,
+} from '@orangehrm/core/util/validation/rules';
 
 const defaultPic = `${window.appGlobal.baseUrl}/../dist/img/user-default-400.png`;
 
@@ -185,10 +189,12 @@ export default {
       isLoading: false,
       createLogin: false,
       user: {...userModel},
+      empNumber: null,
       rules: {
-        firstName: [v => (!!v && v.trim() !== '') || 'Required'],
-        lastName: [v => (!!v && v.trim() !== '') || 'Required'],
-        employeeId: [],
+        firstName: [required, shouldNotExceedCharLength(30)],
+        middleName: [shouldNotExceedCharLength(30)],
+        lastName: [required, shouldNotExceedCharLength(30)],
+        employeeId: [shouldNotExceedCharLength(10)],
         empPicture: [
           v =>
             v === null ||
@@ -201,7 +207,7 @@ export default {
             'File type not allowed',
         ],
         username: [
-          v => (!!v && v.trim() !== '') || 'Required',
+          required,
           v => (v && v.length >= 5) || 'Should have at least 5 characters',
           v => (v && v.length <= 40) || 'Should not exceed 40 characters',
         ],
@@ -222,6 +228,9 @@ export default {
         })
         .then(response => {
           const {data} = response;
+          if (data?.data) {
+            this.empNumber = data.data.empNumber;
+          }
           if (this.createLogin && data?.data) {
             return this.http.http.post('api/v2/admin/users', {
               username: this.user.username,
@@ -235,15 +244,16 @@ export default {
           }
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Successfully Saved!',
-          });
+          return this.$toast.addSuccess();
         })
         .then(() => {
           this.employee = {...employeeModel};
           this.user = {...userModel};
-          this.onCancel();
+          if (this.empNumber) {
+            navigate(`/pim/viewPersonalDetails/empNumber/${this.empNumber}`);
+          } else {
+            this.onCancel();
+          }
         });
     },
   },

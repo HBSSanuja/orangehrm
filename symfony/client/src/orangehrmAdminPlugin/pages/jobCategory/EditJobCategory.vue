@@ -21,14 +21,16 @@
 <template>
   <div class="orangehrm-background-container">
     <div class="orangehrm-card-container">
-      <oxd-text tag="h6">Edit Job Category</oxd-text>
+      <oxd-text tag="h6" class="orangehrm-main-title">
+        Edit Job Category
+      </oxd-text>
 
       <oxd-divider />
 
       <oxd-form :loading="isLoading" @submitValid="onSave">
         <oxd-form-row>
           <oxd-input-field
-            label="Job Category Name"
+            label="Name"
             v-model="category.name"
             :rules="rules.name"
             required
@@ -38,6 +40,7 @@
         <oxd-divider />
 
         <oxd-form-actions>
+          <required-text />
           <oxd-button
             type="button"
             displayType="ghost"
@@ -54,6 +57,7 @@
 <script>
 import {navigate} from '@orangehrm/core/util/helper/navigation';
 import {APIService} from '@/core/util/services/api.service';
+import {required} from '@orangehrm/core/util/validation/rules';
 
 export default {
   props: {
@@ -95,10 +99,7 @@ export default {
           name: this.category.name,
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Job category updated successfully!',
-          });
+          return this.$toast.updateSuccess();
         })
         .then(() => {
           this.onCancel();
@@ -122,9 +123,7 @@ export default {
       })
       .then(response => {
         const {data} = response.data;
-        this.rules.name.push(v => {
-          return (!!v && v.trim() !== '') || 'Required';
-        });
+        this.rules.name.push(required);
         this.rules.name.push(v => {
           return (v && v.length <= 50) || 'Should not exceed 50 characters';
         });
@@ -132,9 +131,7 @@ export default {
           const index = data.findIndex(item => item.name == v);
           if (index > -1) {
             const {id} = data[index];
-            return id != this.category.id
-              ? 'Job category name should be unique'
-              : true;
+            return id != this.category.id ? 'Already exists' : true;
           } else {
             return true;
           }

@@ -21,14 +21,14 @@
 <template>
   <div class="orangehrm-background-container">
     <div class="orangehrm-card-container">
-      <oxd-text tag="h6">Edit Language</oxd-text>
+      <oxd-text tag="h6" class="orangehrm-main-title">Edit Language</oxd-text>
 
       <oxd-divider />
 
       <oxd-form :loading="isLoading" @submitValid="onSave">
         <oxd-form-row>
           <oxd-input-field
-            label="Language Name"
+            label="Name"
             v-model="language.name"
             :rules="rules.name"
             required
@@ -38,6 +38,7 @@
         <oxd-divider />
 
         <oxd-form-actions>
+          <required-text />
           <oxd-button
             type="button"
             displayType="ghost"
@@ -54,6 +55,7 @@
 <script>
 import {navigate} from '@orangehrm/core/util/helper/navigation';
 import {APIService} from '@orangehrm/core/util/services/api.service';
+import {required} from '@orangehrm/core/util/validation/rules';
 
 export default {
   props: {
@@ -93,14 +95,10 @@ export default {
           name: this.language.name,
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Successfully Updated',
-          });
+          return this.$toast.updateSuccess();
         })
         .then(() => {
           this.onCancel();
-          this.isLoading = false;
         });
     },
     onCancel() {
@@ -121,9 +119,7 @@ export default {
       })
       .then(response => {
         const {data} = response.data;
-        this.rules.name.push(v => {
-          return (!!v && v.trim() !== '') || 'Required';
-        });
+        this.rules.name.push(required);
         this.rules.name.push(v => {
           return (v && v.length <= 120) || 'Should not exceed 120 characters';
         });
@@ -131,9 +127,7 @@ export default {
           const index = data.findIndex(item => item.name === v);
           if (index > -1) {
             const {id} = data[index];
-            return id !== this.language.id
-              ? 'Language name should be unique'
-              : true;
+            return id !== this.language.id ? 'Already Exists' : true;
           } else {
             return true;
           }

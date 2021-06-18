@@ -22,8 +22,6 @@ namespace OrangeHRM\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * JobTitle
- *
  * @ORM\Table(name="ohrm_job_title")
  * @ORM\Entity
  */
@@ -49,32 +47,32 @@ class JobTitle
     private string $jobTitleName;
 
     /**
-     * @var string
+     * @var string|null
      *
-     * @ORM\Column(name="job_description", type="string", length=400)
+     * @ORM\Column(name="job_description", type="string", length=400, nullable=true)
      */
-    private string $jobDescription;
+    private ?string $jobDescription = null;
 
     /**
-     * @var string
+     * @var string|null
      *
-     * @ORM\Column(name="note", type="string", length=400)
+     * @ORM\Column(name="note", type="string", length=400, nullable=true)
      */
-    private string $note;
+    private ?string $note = null;
 
     /**
      * @var bool
      *
-     * @ORM\Column(name="is_deleted", type="boolean", nullable=false, options={"default":0})
+     * @ORM\Column(name="is_deleted", type="boolean", nullable=true, options={"default":0})
      */
-    private bool $isDeleted;
+    private bool $isDeleted = false;
 
     /**
      * @var JobSpecificationAttachment|null
      *
      * @ORM\OneToOne(targetEntity="OrangeHRM\Entity\JobSpecificationAttachment", mappedBy="jobTitle", cascade={"persist", "remove"})
      */
-    private ?JobSpecificationAttachment $jobSpecificationAttachment;
+    private ?JobSpecificationAttachment $jobSpecificationAttachment = null;
 
     /**
      * @return int
@@ -109,33 +107,33 @@ class JobTitle
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getJobDescription(): string
+    public function getJobDescription(): ?string
     {
         return $this->jobDescription;
     }
 
     /**
-     * @param string $jobDescription
+     * @param string|null $jobDescription
      */
-    public function setJobDescription(string $jobDescription)
+    public function setJobDescription(?string $jobDescription): void
     {
         $this->jobDescription = $jobDescription;
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getNote(): string
+    public function getNote(): ?string
     {
         return $this->note;
     }
 
     /**
-     * @param string $note
+     * @param string|null $note
      */
-    public function setNote(string $note)
+    public function setNote(?string $note): void
     {
         $this->note = $note;
     }

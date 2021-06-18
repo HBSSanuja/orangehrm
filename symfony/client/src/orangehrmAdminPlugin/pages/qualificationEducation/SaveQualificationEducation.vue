@@ -21,7 +21,7 @@
 <template>
   <div class="orangehrm-background-container">
     <div class="orangehrm-card-container">
-      <oxd-text tag="h6">Save Education</oxd-text>
+      <oxd-text tag="h6" class="orangehrm-main-title">Add Education</oxd-text>
 
       <oxd-divider />
 
@@ -38,6 +38,7 @@
         <oxd-divider />
 
         <oxd-form-actions>
+          <required-text />
           <oxd-button
             type="button"
             displayType="ghost"
@@ -54,6 +55,7 @@
 <script>
 import {navigate} from '@orangehrm/core/util/helper/navigation';
 import {APIService} from '@orangehrm/core/util/services/api.service';
+import {required} from '@orangehrm/core/util/validation/rules';
 
 export default {
   data() {
@@ -81,22 +83,15 @@ export default {
 
   methods: {
     onSave() {
-      //  TODO: Loading
-
       this.isLoading = true;
       this.http
         .create({
           name: this.qualification.name,
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Successfully Added',
-          });
+          return this.$toast.addSuccess();
         })
         .then(() => {
-          this.qualification.name = '';
-          this.isLoading = false;
           this.onCancel();
         });
     },
@@ -111,15 +106,13 @@ export default {
       .getAll()
       .then(response => {
         const {data} = response.data;
+        this.rules.name.push(required);
         this.rules.name.push(v => {
-          return (!!v && v.trim() !== '') || 'Required';
-        });
-        this.rules.name.push(v => {
-          return (v && v.length <= 50) || 'Should not exceed 50 characters';
+          return (v && v.length <= 100) || 'Should not exceed 100 characters';
         });
         this.rules.name.push(v => {
           const index = data.findIndex(item => item.name === v);
-          return index === -1 || 'Qualification name should be unique';
+          return index === -1 || 'Already exists';
         });
         this.isLoading = false;
       })

@@ -35,30 +35,18 @@
       <profile-action-header @click="onClickAdd">
         Assigned Dependents
       </profile-action-header>
-      <oxd-divider />
     </div>
-    <div>
-      <div class="orangehrm-horizontal-padding orangehrm-vertical-padding">
-        <div v-if="checkedItems.length > 0">
-          <oxd-text tag="span">
-            {{ itemsSelectedText }}
-          </oxd-text>
-          <oxd-button
-            label="Delete Selected"
-            iconName="trash-fill"
-            displayType="label-danger"
-            @click="onClickDeleteSelected"
-            class="orangehrm-horizontal-margin"
-          />
-        </div>
-        <oxd-text tag="span" v-else>{{ itemsCountText }}</oxd-text>
-      </div>
-    </div>
+    <table-header
+      :selected="checkedItems.length"
+      :total="total"
+      :loading="isLoading"
+      @delete="onClickDeleteSelected"
+    ></table-header>
     <div class="orangehrm-container">
       <oxd-card-table
         :headers="headers"
         :items="items?.data"
-        :selectable="true"
+        :selectable="selectable"
         :clickable="false"
         :loading="isLoading"
         v-model:selected="checkedItems"
@@ -148,33 +136,6 @@ export default {
 
   data() {
     return {
-      headers: [
-        {name: 'name', slot: 'title', title: 'Name', style: {flex: 1}},
-        {name: 'relationship', title: 'Relationship', style: {flex: 1}},
-        {name: 'dateOfBirth', title: 'Date of Birth', style: {flex: 1}},
-        {
-          name: 'actions',
-          slot: 'action',
-          title: 'Actions',
-          style: {'flex-shrink': 1},
-          cellType: 'oxd-table-cell-actions',
-          cellConfig: {
-            delete: {
-              onClick: this.onClickDelete,
-              component: 'oxd-icon-button',
-              props: {
-                name: 'trash',
-              },
-            },
-            edit: {
-              onClick: this.onClickEdit,
-              props: {
-                name: 'pencil-fill',
-              },
-            },
-          },
-        },
-      ],
       checkedItems: [],
       showSaveModal: false,
       showEditModal: false,
@@ -208,10 +169,7 @@ export default {
             ids: items,
           })
           .then(() => {
-            return this.$toast.success({
-              title: 'Success',
-              message: 'Successfully Deleted',
-            });
+            return this.$toast.deleteSuccess();
           })
           .then(() => {
             this.isLoading = false;
@@ -245,13 +203,40 @@ export default {
   },
 
   computed: {
-    itemsCountText() {
-      return this.total === 0
-        ? 'No Records Found'
-        : `${this.total} Dependent(s) Found`;
+    headers() {
+      const headers = [
+        {name: 'name', slot: 'title', title: 'Name', style: {flex: 1}},
+        {name: 'relationship', title: 'Relationship', style: {flex: 1}},
+        {name: 'dateOfBirth', title: 'Date of Birth', style: {flex: 1}},
+      ];
+      if (this.selectable) {
+        headers.push({
+          name: 'actions',
+          slot: 'action',
+          title: 'Actions',
+          style: {flex: '0.5'},
+          cellType: 'oxd-table-cell-actions',
+          cellConfig: {
+            delete: {
+              onClick: this.onClickDelete,
+              component: 'oxd-icon-button',
+              props: {
+                name: 'trash',
+              },
+            },
+            edit: {
+              onClick: this.onClickEdit,
+              props: {
+                name: 'pencil-fill',
+              },
+            },
+          },
+        });
+      }
+      return headers;
     },
-    itemsSelectedText() {
-      return `${this.checkedItems.length} Dependent(s) Selected`;
+    selectable() {
+      return !(this.showSaveModal || this.showEditModal);
     },
   },
 };

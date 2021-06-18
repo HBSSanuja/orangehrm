@@ -21,7 +21,9 @@ namespace OrangeHRM\Tests\Pim\Service;
 
 use OrangeHRM\Core\Service\ConfigService;
 use OrangeHRM\Pim\Dao\EmployeeDao;
+use OrangeHRM\Pim\Service\EmployeeEventService;
 use OrangeHRM\Pim\Service\EmployeeService;
+use OrangeHRM\Pim\Service\EmployeeTerminationService;
 use OrangeHRM\Tests\Util\TestCase;
 
 /**
@@ -38,6 +40,23 @@ class EmployeeServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->employeeService = new EmployeeService();
+    }
+
+    public function testGetEmployeeDao(): void
+    {
+        $this->assertTrue($this->employeeService->getEmployeeDao() instanceof EmployeeDao);
+    }
+
+    public function testGetEmployeeEventService(): void
+    {
+        $this->assertTrue($this->employeeService->getEmployeeEventService() instanceof EmployeeEventService);
+    }
+
+    public function testGetEmployeeTerminationService(): void
+    {
+        $this->assertTrue($this->employeeService
+                              ->getEmployeeTerminationService() instanceof EmployeeTerminationService
+        );
     }
 
     public function testGetSubordinateIdListBySupervisorId(): void
@@ -104,5 +123,22 @@ class EmployeeServiceTest extends TestCase
 
         $result = $this->employeeService->isSupervisor($empNumber);
         $this->assertTrue($result);
+    }
+
+    public function testDeleteEmployees(): void
+    {
+        $employeesToDelete = ['1', '2', '4'];
+        $numEmployees = count($employeesToDelete);
+
+        $mockDao = $this->getMockBuilder(EmployeeDao::class)->getMock();
+        $mockDao->expects($this->once())
+            ->method('deleteEmployees')
+            ->with($employeesToDelete)
+            ->will($this->returnValue($numEmployees));
+
+        $this->employeeService->setEmployeeDao($mockDao);
+
+        $result = $this->employeeService->deleteEmployees($employeesToDelete);
+        $this->assertEquals($numEmployees, $result);
     }
 }

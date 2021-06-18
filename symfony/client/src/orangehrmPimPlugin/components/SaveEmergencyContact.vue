@@ -20,7 +20,9 @@
 
 <template>
   <div class="orangehrm-horizontal-padding orangehrm-vertical-padding">
-    <oxd-text tag="h6">Save Emergency Contact</oxd-text>
+    <oxd-text tag="h6" class="orangehrm-main-title"
+      >Save Emergency Contact</oxd-text
+    >
     <oxd-divider />
     <oxd-form :loading="isLoading" @submitValid="onSave">
       <oxd-form-row>
@@ -84,6 +86,8 @@
 </template>
 
 <script>
+import {required} from '@orangehrm/core/util/validation/rules';
+
 const emergencyContactModel = {
   name: '',
   relationship: '',
@@ -110,17 +114,13 @@ export default {
       contact: {...emergencyContactModel},
       rules: {
         name: [
-          v => {
-            return (!!v && v.trim() !== '') || 'Required';
-          },
+          required,
           v => {
             return !v || v?.length <= 100 || 'Should not exceed 100 characters';
           },
         ],
         relationship: [
-          v => {
-            return (!!v && v.trim() !== '') || 'Required';
-          },
+          required,
           v => {
             return !v || v?.length <= 100 || 'Should not exceed 100 characters';
           },
@@ -175,10 +175,7 @@ export default {
           ...this.contact,
         })
         .then(() => {
-          return this.$toast.success({
-            title: 'Success',
-            message: 'Successfully Added',
-          });
+          return this.$toast.addSuccess();
         })
         .then(() => {
           this.contact = {...emergencyContactModel};

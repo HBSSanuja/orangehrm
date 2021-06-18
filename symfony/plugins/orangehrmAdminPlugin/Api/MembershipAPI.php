@@ -26,19 +26,17 @@ use OrangeHRM\Admin\Service\MembershipService;
 use OrangeHRM\Core\Api\CommonParams;
 use OrangeHRM\Core\Api\V2\CrudEndpoint;
 use OrangeHRM\Core\Api\V2\Endpoint;
+use OrangeHRM\Core\Api\V2\EndpointCollectionResult;
+use OrangeHRM\Core\Api\V2\EndpointResourceResult;
 use OrangeHRM\Core\Api\V2\Exception\RecordNotFoundException;
 use OrangeHRM\Core\Api\V2\Model\ArrayModel;
 use OrangeHRM\Core\Api\V2\ParameterBag;
 use OrangeHRM\Core\Api\V2\RequestParams;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointCreateResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointDeleteResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetAllResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetOneResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointUpdateResult;
 use OrangeHRM\Core\Api\V2\Validator\ParamRule;
 use OrangeHRM\Core\Api\V2\Validator\ParamRuleCollection;
 use OrangeHRM\Core\Api\V2\Validator\Rule;
 use OrangeHRM\Core\Api\V2\Validator\Rules;
+use OrangeHRM\Core\Exception\DaoException;
 use OrangeHRM\Entity\Membership;
 
 class MembershipAPI extends EndPoint implements CrudEndpoint
@@ -74,15 +72,13 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
      * @throws RecordNotFoundException
      * @throws Exception
      */
-    public function getOne(): EndpointGetOneResult
+    public function getOne(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $id = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
         $membership = $this->getMembershipService()->getMembershipById($id);
-        if (!$membership instanceof Membership) {
-            throw new RecordNotFoundException();
-        }
-        return new EndpointGetOneResult(MembershipModel::class, $membership);
+        $this->throwRecordNotFoundExceptionIfNotExist($membership, Membership::class);
+        return new EndpointResourceResult(MembershipModel::class, $membership);
     }
 
     /**
@@ -102,7 +98,7 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
      * @inheritDoc
      * @throws Exception
      */
-    public function getAll(): EndpointGetAllResult
+    public function getAll(): EndpointCollectionResult
     {
         // TODO:: Check data group permission
 
@@ -110,7 +106,7 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
         $this->setSortingAndPaginationParams($membershipParamHolder);
         $memberships = $this->getMembershipService()->getMembershipList($membershipParamHolder);
         $count = $this->getMembershipService()->getMembershipCount($membershipParamHolder);
-        return new EndpointGetAllResult(
+        return new EndpointCollectionResult(
             MembershipModel::class,
             $memberships,
             new ParameterBag([CommonParams::PARAMETER_TOTAL => $count])
@@ -131,31 +127,28 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
      * @inheritDoc
      * @throws Exception
      */
-    public function create(): EndpointCreateResult
+    public function create(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $memberships = $this->saveMembership();
-
-        return new EndpointCreateResult(MembershipModel::class, $memberships);
+        return new EndpointResourceResult(MembershipModel::class, $memberships);
     }
 
     /**
      * @return Membership
      * @throws RecordNotFoundException
+     * @throws DaoException
      */
     public function saveMembership(): Membership
     {
         $id = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
         $name = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_NAME);
-        if (!empty($id)) {
+        if ($id) {
             $membership = $this->getMembershipService()->getMembershipById($id);
-            if ($membership == null) {
-                throw new RecordNotFoundException();
-            }
+            $this->throwRecordNotFoundExceptionIfNotExist($membership, Membership::class);
         } else {
             $membership = new Membership();
         }
-
         $membership->setName($name);
         return $this->getMembershipService()->saveMembership($membership);
     }
@@ -166,7 +159,8 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
     public function getValidationRuleForCreate(): ParamRuleCollection
     {
         return new ParamRuleCollection(
-            new ParamRule(self::PARAMETER_NAME,
+            new ParamRule(
+                self::PARAMETER_NAME,
                 new Rule(Rules::STRING_TYPE),
                 new Rule(Rules::LENGTH, [null, self::PARAM_RULE_NAME_MAX_LENGTH]),
             ),
@@ -177,12 +171,11 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
      * @inheritDoc
      * @throws Exception
      */
-    public function update(): EndpointUpdateResult
+    public function update(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $memberships = $this->saveMembership();
-
-        return new EndpointUpdateResult(MembershipModel::class, $memberships);
+        return new EndpointResourceResult(MembershipModel::class, $memberships);
     }
 
     /**
@@ -195,7 +188,8 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
                 CommonParams::PARAMETER_ID,
                 new Rule(Rules::POSITIVE)
             ),
-            new ParamRule(self::PARAMETER_NAME,
+            new ParamRule(
+                self::PARAMETER_NAME,
                 new Rule(Rules::STRING_TYPE),
                 new Rule(Rules::LENGTH, [null, self::PARAM_RULE_NAME_MAX_LENGTH]),
             ),
@@ -209,7 +203,8 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
     {
         return new ParamRuleCollection(
             new ParamRule(CommonParams::PARAMETER_ID),
-            new ParamRule(self::PARAMETER_NAME,
+            new ParamRule(
+                self::PARAMETER_NAME,
                 new Rule(Rules::STRING_TYPE),
                 new Rule(Rules::LENGTH, [null, self::PARAM_RULE_NAME_MAX_LENGTH]),
             ),
@@ -218,15 +213,15 @@ class MembershipAPI extends EndPoint implements CrudEndpoint
 
     /**
      *
-     * @return EndpointDeleteResult
+     * @return EndpointResourceResult
      * @throws Exception
      */
-    public function delete(): EndpointDeleteResult
+    public function delete(): EndpointResourceResult
     {
         // TODO:: Check data group permission
         $ids = $this->getRequestParams()->getArray(RequestParams::PARAM_TYPE_BODY, CommonParams::PARAMETER_IDS);
         $this->getMembershipService()->deleteMemberships($ids);
-        return new EndpointDeleteResult(ArrayModel::class, $ids);
+        return new EndpointResourceResult(ArrayModel::class, $ids);
     }
 
     /**

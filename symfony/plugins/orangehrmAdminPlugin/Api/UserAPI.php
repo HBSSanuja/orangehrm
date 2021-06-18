@@ -25,25 +25,26 @@ use OrangeHRM\Admin\Service\UserService;
 use OrangeHRM\Core\Api\CommonParams;
 use OrangeHRM\Core\Api\V2\CrudEndpoint;
 use OrangeHRM\Core\Api\V2\Endpoint;
+use OrangeHRM\Core\Api\V2\EndpointCollectionResult;
+use OrangeHRM\Core\Api\V2\EndpointResourceResult;
 use OrangeHRM\Core\Api\V2\Exception\RecordNotFoundException;
 use OrangeHRM\Core\Api\V2\Model\ArrayModel;
 use OrangeHRM\Core\Api\V2\ParameterBag;
 use OrangeHRM\Core\Api\V2\RequestParams;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointCreateResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointDeleteResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetAllResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetOneResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointUpdateResult;
 use OrangeHRM\Core\Api\V2\Validator\ParamRule;
 use OrangeHRM\Core\Api\V2\Validator\ParamRuleCollection;
 use OrangeHRM\Core\Api\V2\Validator\Rule;
 use OrangeHRM\Core\Api\V2\Validator\Rules;
+use OrangeHRM\Core\Traits\ServiceContainerTrait;
 use OrangeHRM\Entity\Employee;
 use OrangeHRM\Entity\User;
+use OrangeHRM\Framework\Services;
 use OrangeHRM\ORM\Doctrine;
 
 class UserAPI extends Endpoint implements CrudEndpoint
 {
+    use ServiceContainerTrait;
+
     public const PARAMETER_USERNAME = 'username';
     public const PARAMETER_PASSWORD = 'password';
     public const PARAMETER_USER_ROLE_ID = 'userRoleId';
@@ -57,40 +58,24 @@ class UserAPI extends Endpoint implements CrudEndpoint
     public const FILTER_STATUS = 'status';
 
     /**
-     * @var null|UserService
-     */
-    protected ?UserService $systemUserService = null;
-
-    /**
      * @return UserService|null
      */
     public function getSystemUserService(): ?UserService
     {
-        if (is_null($this->systemUserService)) {
-            $this->systemUserService = new UserService();
-        }
-        return $this->systemUserService;
-    }
-
-    /**
-     * @param UserService|null $systemUserService
-     */
-    public function setSystemUserService(?UserService $systemUserService): void
-    {
-        $this->systemUserService = $systemUserService;
+        return $this->getContainer()->get(Services::USER_SERVICE);
     }
 
     /**
      * @inheritDoc
      */
-    public function getOne(): EndpointGetOneResult
+    public function getOne(): EndpointResourceResult
     {
         $userId = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
         $user = $this->getSystemUserService()->getSystemUser($userId);
         if (!$user instanceof User) {
             throw new RecordNotFoundException();
         }
-        return new EndpointGetOneResult(UserModel::class, $user);
+        return new EndpointResourceResult(UserModel::class, $user);
     }
 
     /**
@@ -106,7 +91,7 @@ class UserAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function getAll(): EndpointGetAllResult
+    public function getAll(): EndpointCollectionResult
     {
         // TODO:: Check data group permission
         $userSearchParamHolder = new UserSearchFilterParams();
@@ -137,7 +122,7 @@ class UserAPI extends Endpoint implements CrudEndpoint
         );
 
         $users = $this->getSystemUserService()->searchSystemUsers($userSearchParamHolder);
-        return new EndpointGetAllResult(
+        return new EndpointCollectionResult(
             UserModel::class,
             $users,
             new ParameterBag(
@@ -167,7 +152,7 @@ class UserAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function create(): EndpointCreateResult
+    public function create(): EndpointResourceResult
     {
         $username = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_USERNAME);
         $password = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_PASSWORD);
@@ -185,7 +170,7 @@ class UserAPI extends Endpoint implements CrudEndpoint
         $systemUser->setUserRole($userRole);
         $systemUser->setEmployee($employee);
         $systemUser = $this->getSystemUserService()->saveSystemUser($systemUser, true);
-        return new EndpointCreateResult(UserModel::class, $systemUser);
+        return new EndpointResourceResult(UserModel::class, $systemUser);
     }
 
     /**
@@ -215,7 +200,7 @@ class UserAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function update(): EndpointUpdateResult
+    public function update(): EndpointResourceResult
     {
         $userId = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, CommonParams::PARAMETER_ID);
         $username = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_USERNAME);
@@ -242,7 +227,7 @@ class UserAPI extends Endpoint implements CrudEndpoint
             $systemUser->setUserPassword($password);
         }
         $systemUser = $this->getSystemUserService()->saveSystemUser($systemUser, $changePassword);
-        return new EndpointUpdateResult(UserModel::class, $systemUser);
+        return new EndpointResourceResult(UserModel::class, $systemUser);
     }
 
     /**
@@ -263,11 +248,11 @@ class UserAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function delete(): EndpointDeleteResult
+    public function delete(): EndpointResourceResult
     {
         $ids = $this->getRequestParams()->getArray(RequestParams::PARAM_TYPE_BODY, CommonParams::PARAMETER_IDS);
         $this->getSystemUserService()->deleteSystemUsers($ids);
-        return new EndpointDeleteResult(ArrayModel::class, $ids);
+        return new EndpointResourceResult(ArrayModel::class, $ids);
     }
 
     /**

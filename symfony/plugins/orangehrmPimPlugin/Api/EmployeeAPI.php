@@ -22,14 +22,12 @@ namespace OrangeHRM\Pim\Api;
 use OrangeHRM\Core\Api\CommonParams;
 use OrangeHRM\Core\Api\V2\CrudEndpoint;
 use OrangeHRM\Core\Api\V2\Endpoint;
+use OrangeHRM\Core\Api\V2\EndpointCollectionResult;
+use OrangeHRM\Core\Api\V2\EndpointResourceResult;
 use OrangeHRM\Core\Api\V2\Exception\BadRequestException;
+use OrangeHRM\Core\Api\V2\Model\ArrayModel;
 use OrangeHRM\Core\Api\V2\ParameterBag;
 use OrangeHRM\Core\Api\V2\RequestParams;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointCreateResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointDeleteResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetAllResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointGetOneResult;
-use OrangeHRM\Core\Api\V2\Serializer\EndpointUpdateResult;
 use OrangeHRM\Core\Api\V2\Validator\ParamRule;
 use OrangeHRM\Core\Api\V2\Validator\ParamRuleCollection;
 use OrangeHRM\Core\Api\V2\Validator\Rule;
@@ -69,7 +67,7 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
     public const PARAM_RULE_FIRST_NAME_MAX_LENGTH = 30;
     public const PARAM_RULE_MIDDLE_NAME_MAX_LENGTH = 30;
     public const PARAM_RULE_LAST_NAME_MAX_LENGTH = 30;
-    public const PARAM_RULE_EMPLOYEE_ID_MAX_LENGTH = 30;
+    public const PARAM_RULE_EMPLOYEE_ID_MAX_LENGTH = 50;
     public const PARAM_RULE_EMP_PICTURE_FILE_NAME_MAX_LENGTH = 100;
     public const PARAM_RULE_FILTER_NAME_MAX_LENGTH = 100;
     public const PARAM_RULE_FILTER_NAME_OR_ID_MAX_LENGTH = 100;
@@ -108,13 +106,13 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function getOne(): EndpointGetOneResult
+    public function getOne(): EndpointResourceResult
     {
         $empNumber = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, self::PARAMETER_EMP_NUMBER);
         $employee = $this->getEmployeeService()->getEmployeeByEmpNumber($empNumber);
         $this->throwRecordNotFoundExceptionIfNotExist($employee, Employee::class);
 
-        return new EndpointGetOneResult($this->getModelClass(), $employee);
+        return new EndpointResourceResult($this->getModelClass(), $employee);
     }
 
     /**
@@ -157,7 +155,7 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function getAll(): EndpointGetAllResult
+    public function getAll(): EndpointCollectionResult
     {
         // TODO:: Check data group permission & get employees using UserRoleManagerFactory::getUserRoleManager()->getAccessibleEntityProperties
         $employeeParamHolder = new EmployeeSearchFilterParams();
@@ -216,7 +214,7 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
 
         $employees = $this->getEmployeeService()->getEmployeeList($employeeParamHolder);
         $count = $this->getEmployeeService()->getEmployeeCount($employeeParamHolder);
-        return new EndpointGetAllResult(
+        return new EndpointCollectionResult(
             $this->getModelClass(),
             $employees,
             new ParameterBag([CommonParams::PARAMETER_TOTAL => $count])
@@ -296,7 +294,7 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function create(): EndpointCreateResult
+    public function create(): EndpointResourceResult
     {
         $allowedToAddEmployee = $this->getUserRoleManager()->isActionAllowed(
             WorkflowStateMachine::FLOW_EMPLOYEE,
@@ -337,7 +335,7 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
         }
         $this->getEmployeeService()->saveAddEmployeeEvent($employee);
 
-        return new EndpointCreateResult(EmployeeModel::class, $employee);
+        return new EndpointResourceResult(EmployeeModel::class, $employee);
     }
 
     /**
@@ -349,7 +347,10 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
         $firstName = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_FIRST_NAME);
         $middleName = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_MIDDLE_NAME);
         $lastName = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_LAST_NAME);
-        $employeeId = $this->getRequestParams()->getString(RequestParams::PARAM_TYPE_BODY, self::PARAMETER_EMPLOYEE_ID);
+        $employeeId = $this->getRequestParams()->getStringOrNull(
+            RequestParams::PARAM_TYPE_BODY,
+            self::PARAMETER_EMPLOYEE_ID
+        );
 
         $employee->setFirstName($firstName);
         $employee->setMiddleName($middleName);
@@ -404,12 +405,13 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
                     new Rule(Rules::LENGTH, [null, self::PARAM_RULE_LAST_NAME_MAX_LENGTH]),
                 )
             ),
-            $this->getValidationDecorator()->requiredParamRule(
+            $this->getValidationDecorator()->notRequiredParamRule(
                 new ParamRule(
                     self::PARAMETER_EMPLOYEE_ID,
                     new Rule(Rules::STRING_TYPE),
                     new Rule(Rules::LENGTH, [null, self::PARAM_RULE_EMPLOYEE_ID_MAX_LENGTH]),
-                )
+                ),
+                true
             ),
         ];
     }
@@ -417,14 +419,14 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function update(): EndpointUpdateResult
+    public function update(): EndpointResourceResult
     {
         $empNumber = $this->getRequestParams()->getInt(RequestParams::PARAM_TYPE_ATTRIBUTE, self::PARAMETER_EMP_NUMBER);
         $employee = $this->getEmployeeService()->getEmployeeByEmpNumber($empNumber);
         $this->throwRecordNotFoundExceptionIfNotExist($employee, Employee::class);
         $this->setParamsToEmployee($employee);
         $this->getEmployeeService()->saveEmployee($employee);
-        return new EndpointUpdateResult(EmployeeModel::class, $employee);
+        return new EndpointResourceResult(EmployeeModel::class, $employee);
     }
 
     /**
@@ -441,9 +443,14 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
     /**
      * @inheritDoc
      */
-    public function delete(): EndpointDeleteResult
+    public function delete(): EndpointResourceResult
     {
-        throw $this->getNotImplementedException();
+        $ids = $this->getRequestParams()->getArray(RequestParams::PARAM_TYPE_BODY, CommonParams::PARAMETER_IDS);
+        if (!$this->getUserRoleManager()->areEntitiesAccessible(Employee::class, $ids)) {
+            throw $this->getBadRequestException('Employees not accessible');
+        }
+        $this->getEmployeeService()->deleteEmployees($ids);
+        return new EndpointResourceResult(ArrayModel::class, $ids);
     }
 
     /**
@@ -451,6 +458,25 @@ class EmployeeAPI extends Endpoint implements CrudEndpoint
      */
     public function getValidationRuleForDelete(): ParamRuleCollection
     {
-        throw $this->getNotImplementedException();
+        $allowedToDeleteActive = $this->getUserRoleManager()->isActionAllowed(
+            WorkflowStateMachine::FLOW_EMPLOYEE,
+            Employee::STATE_ACTIVE,
+            WorkflowStateMachine::EMPLOYEE_ACTION_DELETE_ACTIVE
+        );
+        $allowedToDeleteTerminated = $this->getUserRoleManager()->isActionAllowed(
+            WorkflowStateMachine::FLOW_EMPLOYEE,
+            Employee::STATE_TERMINATED,
+            WorkflowStateMachine::EMPLOYEE_ACTION_DELETE_TERMINATED
+        );
+        if (!($allowedToDeleteActive || $allowedToDeleteTerminated)) {
+            throw $this->getBadRequestException('Not allowed to delete employees');
+        }
+
+        return new ParamRuleCollection(
+            new ParamRule(
+                CommonParams::PARAMETER_IDS,
+                new Rule(Rules::ARRAY_TYPE)
+            )
+        );
     }
 }

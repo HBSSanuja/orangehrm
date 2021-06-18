@@ -21,6 +21,7 @@ namespace OrangeHRM\Entity\Decorator;
 
 use DateTime;
 use OrangeHRM\Core\Traits\ORM\EntityManagerHelperTrait;
+use OrangeHRM\Core\Traits\Service\DateTimeHelperTrait;
 use OrangeHRM\Entity\Employee;
 use OrangeHRM\Entity\EmploymentStatus;
 use OrangeHRM\Entity\JobCategory;
@@ -32,6 +33,7 @@ use OrangeHRM\Entity\Subunit;
 class EmployeeDecorator
 {
     use EntityManagerHelperTrait;
+    use DateTimeHelperTrait;
 
     /**
      * @var Employee
@@ -57,21 +59,19 @@ class EmployeeDecorator
     /**
      * @return string|null
      */
-    public function getDrivingLicenseExpiredDate(): ?string
+    public function getJoinedDate(): ?string
     {
-        $date = $this->getEmployee()->getDrivingLicenseExpiredDate();
-        return $date ? $date->format('Y-m-d') : null;
+        $date = $this->getEmployee()->getJoinedDate();
+        return $this->getDateTimeHelper()->formatDateTimeToYmd($date);
     }
 
     /**
-     * @param string|null $drivingLicenseExpiredDate
+     * @return string|null
      */
-    public function setDrivingLicenseExpiredDate(?string $drivingLicenseExpiredDate): void
+    public function getDrivingLicenseExpiredDate(): ?string
     {
-        if (!is_null($drivingLicenseExpiredDate)) {
-            $drivingLicenseExpiredDate = new DateTime($drivingLicenseExpiredDate);
-        }
-        $this->getEmployee()->setDrivingLicenseExpiredDate($drivingLicenseExpiredDate);
+        $date = $this->getEmployee()->getDrivingLicenseExpiredDate();
+        return $this->getDateTimeHelper()->formatDateTimeToYmd($date);
     }
 
     /**
@@ -80,18 +80,7 @@ class EmployeeDecorator
     public function getBirthday(): ?string
     {
         $date = $this->getEmployee()->getBirthday();
-        return $date ? $date->format('Y-m-d') : null;
-    }
-
-    /**
-     * @param string|null $birthday
-     */
-    public function setBirthday(?string $birthday): void
-    {
-        if (!is_null($birthday)) {
-            $birthday = new DateTime($birthday);
-        }
-        $this->getEmployee()->setBirthday($birthday);
+        return $this->getDateTimeHelper()->formatDateTimeToYmd($date);
     }
 
     /**
@@ -153,14 +142,20 @@ class EmployeeDecorator
     public function setLocationById(?int $id): void
     {
         $location = $this->getLocation();
-        if ($location) {
-            $this->getEntityManager()->remove($location);
-        }
-        /** @var Location|null $location */
-        $location = is_null($id) ? null : $this->getReference(Location::class, $id);
-        if ($location) {
-            $this->getEmployee()->setLocations([$location]);
-        }
+        $locationId = $location instanceof Location ? $location->getId() : null;
+
+        if (is_null($id)) {
+            // Remove location
+            $this->getEmployee()->setLocations([]);
+        } elseif ($locationId !== $id) {
+            // Changed location
+            $this->getEmployee()->setLocations([]);
+
+            $location = $this->getReference(Location::class, $id);
+            if ($location) {
+                $this->getEmployee()->setLocations([$location]);
+            }
+        } // else not changed location
     }
 
     /**
