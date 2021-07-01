@@ -3568,8 +3568,6 @@ UPDATE `ohrm_menu_item` SET `status` = '0' WHERE `ohrm_menu_item`.`menu_title` =
 UPDATE `ohrm_menu_item` SET `status` = '0' WHERE `ohrm_menu_item`.`menu_title` = 'Optional Fields';
 UPDATE `ohrm_menu_item` SET `status` = '0' WHERE `ohrm_menu_item`.`menu_title` = 'Custom Fields';
 UPDATE `ohrm_menu_item` SET `status` = '0' WHERE `ohrm_menu_item`.`menu_title` = 'Data Import';
-UPDATE `ohrm_menu_item` SET `status` = '0' WHERE `ohrm_menu_item`.`menu_title` = 'Reporting Methods';
-UPDATE `ohrm_menu_item` SET `status` = '0' WHERE `ohrm_menu_item`.`menu_title` = 'Termination Reasons';
 
 UPDATE `ohrm_menu_item` SET `additional_params` = '{\"icon\":\"icon-admin\"}' WHERE `ohrm_menu_item`.`menu_title` = 'Admin';
 UPDATE `ohrm_menu_item` SET `additional_params` = '{\"icon\":\"icon-pim\"}' WHERE `ohrm_menu_item`.`menu_title` = 'PIM';
@@ -3577,3 +3575,6 @@ UPDATE `ohrm_menu_item` SET `additional_params` = '{\"icon\":\"icon-time\"}' WHE
 UPDATE `ohrm_menu_item` SET `additional_params` = '{\"icon\":\"icon-leave\"}' WHERE `ohrm_menu_item`.`menu_title` = 'Leave';
 UPDATE `ohrm_menu_item` SET `additional_params` = '{\"icon\":\"icon-recruitment\"}' WHERE `ohrm_menu_item`.`menu_title` = 'Recruitment';
 
+-- Should remove once implement dashboard screen
+UPDATE `ohrm_home_page` SET action='pim/viewPimModule' WHERE `user_role_id`=1;
+UPDATE `ohrm_home_page` SET action='pim/viewPimModule' WHERE `user_role_id`=2;

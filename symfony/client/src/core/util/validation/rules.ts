@@ -22,7 +22,6 @@ import {parseDate, isBefore, isAfter} from '../helper/datefns';
  * @param {string|number|Array} value
  * @returns {boolean|string}
  */
-
 export const required = function(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: string | number | Array<any>,
@@ -33,6 +32,8 @@ export const required = function(
     return Number.isNaN(value) || 'Required';
   } else if (Array.isArray(value)) {
     return (!!value && value.length !== 0) || 'Required';
+  } else if (typeof value === 'object') {
+    return value !== null || 'Required';
   } else {
     return 'Required';
   }
@@ -51,7 +52,7 @@ export const shouldNotExceedCharLength = function(charLength: number) {
   };
 };
 
-export const validDateFormat = function(dateFormat: string) {
+export const validDateFormat = function(dateFormat = 'yyyy-MM-dd') {
   return function(value: string): boolean | string {
     if (!value) return true;
     const parsed = parseDate(value, dateFormat);
@@ -78,25 +79,98 @@ export const digitsOnly = function(value: string): boolean | string {
 };
 
 export const beforeDate = function(
-  dateFormat: string,
   date1: string,
   date2: string,
+  dateFormat = 'yyyy-MM-dd',
 ) {
-  // Skip assersion on unset values
+  // Skip assertion on unset values
   if (!date1 || !date2) {
     return true;
   }
   return isBefore(date1, date2, dateFormat);
 };
 
+/**
+ * Check whether date1 is after date2
+ * @param {string} date1
+ * @param {string} date2
+ * @param {string} dateFormat
+ */
 export const afterDate = function(
-  dateFormat: string,
   date1: string,
   date2: string,
+  dateFormat = 'yyyy-MM-dd',
 ) {
-  // Skip assersion on unset values
+  // Skip assertion on unset values
   if (!date1 || !date2) {
     return true;
   }
   return isAfter(date1, date2, dateFormat);
+};
+
+/**
+ * @param {string} startDate
+ * @param {string|undefined} message
+ * @param {string} dateFormat
+ */
+export const endDateShouldBeAfterStartDate = (
+  startDate: string | Function,
+  message?: string,
+  dateFormat = 'yyyy-MM-dd',
+) => {
+  return (value: string): boolean | string => {
+    const resolvedStartDate =
+      typeof startDate === 'function' ? startDate() : startDate;
+    return (
+      afterDate(value, resolvedStartDate, dateFormat) ||
+      (typeof message === 'string'
+        ? message
+        : 'End date should be after start date')
+    );
+  };
+};
+
+/**
+ * @param {number} size - File size in bytes
+ */
+export const maxFileSize = function(size: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function(file: any): boolean | string {
+    return (
+      file === null ||
+      (file.size && file.size <= size) ||
+      'Attachment size exceeded'
+    );
+  };
+};
+
+export const validFileTypes = function(fileTypes: string[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function(file: any): boolean | string {
+    return (
+      file === null ||
+      (file && fileTypes.findIndex(item => item === file.type) > -1) ||
+      'File type not allowed'
+    );
+  };
+};
+
+export const validEmailFormat = function(value: string): boolean | string {
+  return (
+    !value ||
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9]+)+$/.test(
+      value,
+    ) ||
+    'Expected format: admin@example.com'
+  );
+};
+
+export const validPhoneNumberFormat = function(
+  value: string,
+): boolean | string {
+  return (
+    !value ||
+    /^[0-9+\-/()]+$/.test(value) ||
+    'Allows numbers and only + - / ( )'
+  );
 };

@@ -95,7 +95,7 @@
           v-model:selected="checkedItems"
           :loading="isLoading"
           rowDecorator="oxd-table-decorator-card"
-          :order="order"
+          v-model:order="sortDefinition"
           class="orangehrm-employee-list"
         />
       </div>
@@ -122,6 +122,7 @@ import SupervisorDropdown from '@/core/components/inputs/SupervisorDropdown';
 import JobtitleDropdown from '@/orangehrmPimPlugin/components/JobtitleDropdown';
 import SubunitDropdown from '@/orangehrmPimPlugin/components/SubunitDropdown';
 import EmploymentStatusDropdown from '@/orangehrmPimPlugin/components/EmploymentStatusDropdown';
+import useSort from '@orangehrm/core/util/composable/useSort';
 
 const userdataNormalizer = data => {
   return data.map(item => {
@@ -130,7 +131,9 @@ const userdataNormalizer = data => {
       employeeId: item.employeeId,
       firstAndMiddleName: `${item.firstName} ${item.middleName}`,
       lastName: item.lastName,
-      jobTitle: item.jobTitle?.title,
+      jobTitle: item.jobTitle?.isDeleted
+        ? item.jobTitle.title + ' (Deleted)'
+        : item.jobTitle?.title,
       empStatus: item.empStatus?.name,
       subunit: item.subunit?.name,
       supervisor: item.supervisors
@@ -152,6 +155,15 @@ const defaultFilters = {
   subunitId: [{id: 0, label: 'All'}],
 };
 
+const defaultSortOrder = {
+  'employee.employeeId': 'DEFAULT',
+  'employee.firstName': 'ASC',
+  'employee.lastName': 'DEFAULT',
+  'jobTitle.jobTitleName': 'DEFAULT',
+  'empStatus.name': 'DEFAULT',
+  'subunit.name': 'DEFAULT',
+};
+
 export default {
   components: {
     'delete-confirmation': DeleteConfirmationDialog,
@@ -165,16 +177,43 @@ export default {
   data() {
     return {
       headers: [
-        {name: 'employeeId', slot: 'title', title: 'Id', style: {flex: 1}},
+        {
+          name: 'employeeId',
+          slot: 'title',
+          title: 'Id',
+          sortField: 'employee.employeeId',
+          style: {width: '3rem'},
+        },
         {
           name: 'firstAndMiddleName',
           title: 'First (& Middle) Name',
+          sortField: 'employee.firstName',
           style: {flex: 1},
         },
-        {name: 'lastName', title: 'Last Name', style: {flex: 1}},
-        {name: 'jobTitle', title: 'Job Title', style: {flex: 1}},
-        {name: 'empStatus', title: 'Employment Status', style: {flex: 1}},
-        {name: 'subunit', title: 'Sub Unit', style: {flex: 1}},
+        {
+          name: 'lastName',
+          title: 'Last Name',
+          sortField: 'employee.lastName',
+          style: {flex: 1},
+        },
+        {
+          name: 'jobTitle',
+          title: 'Job Title',
+          sortField: 'jobTitle.jobTitleName',
+          style: {flex: 1},
+        },
+        {
+          name: 'empStatus',
+          title: 'Employment Status',
+          sortField: 'empStatus.name',
+          style: {flex: 1},
+        },
+        {
+          name: 'subunit',
+          title: 'Sub Unit',
+          sortField: 'subunit.name',
+          style: {flex: 1},
+        },
         {name: 'supervisor', title: 'Supervisor', style: {flex: 1}},
         {
           name: 'actions',
@@ -205,45 +244,20 @@ export default {
         {id: 3, label: 'Past Employees Only'},
       ],
       checkedItems: [],
-      order: [
-        {
-          id: 0,
-          default: 'desc',
-        },
-        {
-          id: 1,
-          default: '',
-        },
-        {
-          id: 2,
-          default: '',
-        },
-        {
-          id: 3,
-          default: '',
-        },
-        {
-          id: 4,
-          default: '',
-        },
-        {
-          id: 5,
-          default: '',
-        },
-        {
-          id: 6,
-          default: '',
-        },
-      ],
     };
   },
 
   setup() {
     const filters = ref({...defaultFilters});
+
+    const {sortDefinition, sortField, sortOrder, onSort} = useSort({
+      sortDefinition: defaultSortOrder,
+    });
+
     const serializedFilters = computed(() => {
       return {
         model: 'detailed',
-        nameOrId: filters.value.employee.map(item => item.id)[0],
+        empNumber: filters.value.employee.map(item => item.id)[0],
         employeeId: filters.value.employeeId,
         empStatusId: filters.value.empStatusId.map(item => item.id)[0],
         includeEmployees: filters.value.includeEmployees.map(item => {
@@ -256,8 +270,11 @@ export default {
         supervisorEmpNumbers: filters.value.supervisor.map(item => item.id),
         jobTitleId: filters.value.jobTitleId.map(item => item.id)[0],
         subunitId: filters.value.subunitId.map(item => item.id)[0],
+        sortField: sortField.value,
+        sortOrder: sortOrder.value,
       };
     });
+
     const http = new APIService(
       window.appGlobal.baseUrl,
       'api/v2/pim/employees',
@@ -272,6 +289,9 @@ export default {
       isLoading,
       execQuery,
     } = usePaginate(http, serializedFilters, userdataNormalizer);
+
+    onSort(execQuery);
+
     return {
       http,
       showPaginator,
@@ -283,6 +303,7 @@ export default {
       execQuery,
       items: response,
       filters,
+      sortDefinition,
     };
   },
 

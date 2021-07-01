@@ -73,6 +73,7 @@
                       v-model="user.username"
                       :rules="rules.username"
                       required
+                      autocomplete="off"
                     />
                   </oxd-grid-item>
 
@@ -108,6 +109,7 @@
 
         <oxd-divider />
         <oxd-form-actions>
+          <required-text />
           <oxd-button displayType="ghost" label="Cancel" @click="onCancel" />
           <submit-button />
         </oxd-form-actions>
@@ -244,7 +246,7 @@ export default {
           }
         })
         .then(() => {
-          return this.$toast.addSuccess();
+          return this.$toast.saveSuccess();
         })
         .then(() => {
           this.employee = {...employeeModel};

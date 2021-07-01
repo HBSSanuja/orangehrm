@@ -57,6 +57,7 @@
 
       <oxd-divider />
       <oxd-form-actions>
+        <required-text />
         <oxd-button
           type="button"
           displayType="ghost"
@@ -70,6 +71,8 @@
 </template>
 
 <script>
+import {shouldNotExceedCharLength} from '@orangehrm/core/util/validation/rules';
+
 const attachmentModel = {
   attachment: null,
   description: '',
@@ -98,12 +101,7 @@ export default {
         ...attachmentModel,
       },
       rules: {
-        description: [
-          v =>
-            (v && v.length <= 400) ||
-            v === '' ||
-            'Should not exceed 400 characters',
-        ],
+        description: [shouldNotExceedCharLength(200)],
         attachment: [
           v => {
             return v !== null || 'Required';
@@ -128,7 +126,7 @@ export default {
           ...this.attachment,
         })
         .then(() => {
-          return this.$toast.addSuccess();
+          return this.$toast.saveSuccess();
         })
         .then(() => {
           this.attachment = {...attachmentModel};

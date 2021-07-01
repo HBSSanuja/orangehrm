@@ -1,27 +1,38 @@
 <?php
+/**
+ * OrangeHRM is a comprehensive Human Resource Management (HRM) System that captures
+ * all the essential functionalities required for any enterprise.
+ * Copyright (C) 2006 OrangeHRM Inc., http://www.orangehrm.com
+ *
+ * OrangeHRM is free software; you can redistribute it and/or modify it under the terms of
+ * the GNU General Public License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * OrangeHRM is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program;
+ * if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA  02110-1301, USA
+ */
 
 namespace OrangeHRM\Entity;
 
 use DateTime;
 use Doctrine\ORM\Mapping as ORM;
+use OrangeHRM\Entity\Decorator\DecoratorTrait;
+use OrangeHRM\Entity\Decorator\UserDecorator;
 
 /**
- * User
+ * @method UserDecorator getDecorator()
  *
  * @ORM\Table(name="ohrm_user")
  * @ORM\Entity
  */
 class User
 {
-    public const NO_OF_RECORDS_PER_PAGE = 50;
-    public const ADMIN_USER_ROLE_ID = 1;
-    public const ENABLED = 1;
-    public const DISABLED = 0;
-    public const DELETED = 1;
-    public const UNDELETED = 0;
-    public const USER_TYPE_ADMIN = "Admin"; // TODO: Check the needness when new user roles are implemented
-    public const USER_TYPE_EMPLOYEE = "Employee"; // TODO: Check the needness when new user roles are implemented
-    public const USER_TYPE_SUPERVISOR = "Supervisor"; // TODO: Check the needness when new user roles are implemented
+    use DecoratorTrait;
 
     /**
      * @var int
@@ -65,35 +76,35 @@ class User
      *
      * @ORM\Column(name="date_entered", type="datetime", length=25, nullable=true)
      */
-    private ?DateTime $dateEntered;
+    private ?DateTime $dateEntered = null;
 
     /**
      * @var DateTime|null
      *
      * @ORM\Column(name="date_modified", type="datetime", length=25, nullable=true)
      */
-    private ?DateTime $dateModified;
+    private ?DateTime $dateModified = null;
 
     /**
      * @var int|null
      *
      * @ORM\Column(name="modified_user_id", type="integer", nullable=true)
      */
-    private ?int $modifiedUserId;
+    private ?int $modifiedUserId = null;
 
     /**
      * @var int|null
      *
      * @ORM\Column(name="created_by", type="integer", nullable=true)
      */
-    private ?int $createdBy;
+    private ?int $createdBy = null;
 
     /**
      * @var Employee|null
      * @ORM\ManyToOne(targetEntity="OrangeHRM\Entity\Employee", inversedBy="users")
      * @ORM\JoinColumn(name="emp_number", referencedColumnName="emp_number")
      */
-    private ?Employee $employee;
+    private ?Employee $employee = null;
 
     /**
      * @var UserRole
@@ -291,57 +302,5 @@ class User
     public function setUserRole(UserRole $userRole): void
     {
         $this->userRole = $userRole;
-    }
-
-    /**
-     * @return string
-     * @since 4.x
-     */
-    public function getTextStatus()
-    {
-        if ($this->getStatus()) {
-            return 'Enabled';
-        } else {
-            return 'Disabled';
-        }
-    }
-
-    /**
-     * @return string
-     * @since 4.x
-     */
-    public function getIsAdmin()
-    {
-        if ($this->getUserRole()->getId() == User::ADMIN_USER_ROLE_ID) {
-            return 'Yes';
-        } else {
-            return 'No';
-        }
-    }
-
-    /**
-     * @return string|null
-     * @since 4.x
-     */
-    public function getUsergId()
-    {
-        if ($this->getUserRole()->getId() == User::ADMIN_USER_ROLE_ID) {
-            return 'USG001';
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * @return string|null
-     * @since 4.x
-     */
-    public function getName()
-    {
-        if ($this->getEmployee()->getFirstName() != '') {
-            return $this->getEmployee()->getFirstName();
-        } else {
-            return $this->getUserRole()->getName();
-        }
     }
 }

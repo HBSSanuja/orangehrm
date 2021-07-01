@@ -64,6 +64,7 @@
                 v-model="user.username"
                 :rules="rules.username"
                 required
+                autocomplete="off"
               />
             </oxd-grid-item>
           </oxd-grid>
@@ -76,7 +77,13 @@
 
         <oxd-divider />
         <oxd-form-actions>
-          <oxd-button displayType="ghost" label="Cancel" @click="onCancel" />
+          <required-text />
+          <oxd-button
+            type="button"
+            displayType="ghost"
+            label="Cancel"
+            @click="onCancel"
+          />
           <submit-button />
         </oxd-form-actions>
       </oxd-form>
@@ -120,8 +127,10 @@ export default {
       rules: {
         username: [
           required,
-          v => (v && v.length >= 5) || 'Should have at least 5 characters',
-          v => (v && v.length <= 40) || 'Should not exceed 40 characters',
+          v =>
+            (v && v.trim().length >= 5) || 'Should have at least 5 characters',
+          v =>
+            (v && v.trim().length <= 40) || 'Should not exceed 40 characters',
         ],
         role: [v => (!!v && v.length != 0) || 'Required'],
         employee: [v => (!!v && v.length != 0) || 'Required'],
@@ -146,7 +155,7 @@ export default {
       this.isLoading = true;
       this.http
         .create({
-          username: this.user.username,
+          username: this.user.username.trim(),
           password: this.user.password,
           status:
             this.user.status[0] && this.user.status[0].label === 'Enabled',
@@ -154,7 +163,7 @@ export default {
           empNumber: this.user.employee[0].id,
         })
         .then(() => {
-          return this.$toast.addSuccess();
+          return this.$toast.saveSuccess();
         })
         .then(() => {
           // go back
